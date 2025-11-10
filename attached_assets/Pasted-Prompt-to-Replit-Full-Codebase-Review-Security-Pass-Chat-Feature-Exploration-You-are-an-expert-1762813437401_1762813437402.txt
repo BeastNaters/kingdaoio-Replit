@@ -1,0 +1,210 @@
+Prompt to Replit: Full Codebase Review + Security Pass + Chat Feature Exploration
+
+You are an expert full-stack/Web3/Next.js reviewer. I have an MVP for the KingDAO Treasury Dashboard that we’ve been iterating on. Right now we are okay leaving mock data and stubs in place, but I want you to do a full review of the project and tell me where the risks and cleanups are.
+
+Please go through this in an organized way.
+
+========================================
+
+PROJECT CONTEXT (READ THIS FIRST)
+========================================
+
+This app is a token-gated treasury/dashboard for a DAO.
+
+Token-gating is based on holding a specific NFT on Ethereum mainnet:
+
+KING / Kong NFT contract: 0x6E3a2e08A88186f41ECD90E0683d9cA0983a4328
+
+Snapshot space: kongsdao.eth
+
+We added a dashboard with multiple tabs:
+
+NFT Collections (Rollbots, Sports Rollbots, KING)
+
+Crypto (with a DCA Portfolio subsection)
+
+Multi-Sig Wallets
+
+DAO Wallets
+
+DAO Tactical Wallets
+
+We’re currently okay using mock data for token prices, multi-sig balances, and even floor prices.
+
+User preference: use Web3/on-chain or general price APIs for most things, and only use Dune for KING NFT analytics.
+
+DAO wallet addresses, multi-sigs, and tactical wallets are hardcoded right now.
+
+Your job is to look at what we have and tell us what to fix, tighten, or improve before we give this to our dev team.
+
+========================================
+2. SECURITY / SECRETS REVIEW
+
+Scan the codebase and tell me:
+
+Are any environment variables being exposed to the client that should be server-only?
+
+For example: Google service account keys, Supabase service role, Dune API key — these should not be sent to the client.
+
+Are we using NEXT_PUBLIC_... in places where we shouldn’t?
+
+Are we importing server-only libraries in client components?
+
+Are any API routes echoing full error objects (which might leak secrets)?
+
+Are we directly inlining private keys or RPC URLs anywhere in React components?
+
+If we are using Supabase, are we using the service role key in the client? (We should not.)
+
+Make recommendations like:
+
+“Move this logic to a server route”
+
+“Create a thin proxy in /api/... to prevent exposing keys”
+
+“Split .env.local vs .env.example”
+
+If you see any place where user-supplied addresses are used without validation, call that out too.
+
+Output a list called “Security Notes” with concrete file/line references if possible.
+
+========================================
+3. ARCHITECTURE / CLEANUP REVIEW
+
+I want you to look at the overall structure and tell me what to improve:
+
+Are we mixing page-level logic and data fetching in big components that should be split (e.g. dashboard page doing too much)?
+
+Are we repeating the wallet/NFT collection data in multiple places instead of centralizing in a data/ or lib/ file?
+
+Are the API routes consistent in how they return { success, data, message }?
+
+Are we handling errors and loading states in the dashboard tabs?
+
+Are we using types (TypeScript) consistently for:
+
+TokenBalance
+
+NftHolding
+
+TreasurySnapshot
+
+wallet objects
+
+If not, tell me where to add types/... files.
+
+If you see obvious refactors (e.g. “these 5 tabs can share a TotalValueCard component”), recommend them.
+
+========================================
+4. PERFORMANCE / DX SUGGESTIONS
+
+Tell me:
+
+Which fetches should move to server components / route handlers to reduce client bundle size.
+
+Whether we should add SWR/React Query for the dashboard to avoid repeated fetches per tab.
+
+Whether some of the mock data should be moved to a single source so it’s easy to swap for Supabase later.
+
+If you spot any N+1-style calls (e.g. fetching per collection) that should be batched.
+
+========================================
+5. COMMUNITY CHAT FALLBACK (NEW FEATURE EXPLORATION)
+
+Discord is the DAO’s main comms channel, but we want a fallback community chat inside this app in case Discord goes down.
+
+Propose an implementation based on the current stack (Next.js + React + Supabase available) that is simple, token-gated, and DAO-owned.
+
+What I want from you:
+
+Suggest a minimal “Community Chat” page or component that:
+
+is token-gated (reuse existing “is holder?” logic),
+
+shows a real-time message list,
+
+allows posting a message,
+
+stores messages in Supabase (or mock for now),
+
+can be filtered by channel/topic (optional).
+
+Give me the Supabase table schema you would use, e.g.:
+
+create table community_messages (
+  id uuid primary key default uuid_generate_v4(),
+  wallet_address text not null,
+  display_name text,
+  message text not null,
+  created_at timestamptz default now(),
+  channel text default 'general'
+);
+
+
+Tell me how to prevent spam or non-holders:
+
+message API route should validate holder status server-side,
+
+rate limit by wallet,
+
+optional: sign message with wallet and verify.
+
+Tell me where in our current app it makes the most sense to mount this (e.g. new tab called “Community Chat” under dashboard, or new route /community-chat).
+
+Add a note that this is a fallback for Discord, not a full replacement.
+
+========================================
+6. RECOMMENDATIONS BASED ON CURRENT DIRECTION
+
+Based on what you see in the repo, make a short “Recommendations” section that covers:
+
+“Move hardcoded DAO wallet/NFT collection data to Supabase once schema is ready.”
+
+“Abstract price sources: right now we’re using mock data — create lib/pricing.ts and make all tabs use it.”
+
+“Document integration points clearly for the dev team in one file (e.g. DEV_INTEGRATION_LOG.md).”
+
+“Add role/permission checks if later we add admin-only pages (like editing DAO wallets).”
+
+“Confirm all external addresses (DAO Fund, multisigs) are on Ethereum mainnet and add chainId metadata.”
+
+========================================
+7. DO NOT REMOVE MOCK DATA YET
+
+Very important: do not delete or replace the mock data right now.
+We are intentionally working with stubs until all external services (Dune for KING, web3 price APIs, Safe, Solana RPC) are finalized.
+You can, however, add comments like // TODO: replace with live data from XYZ.
+
+========================================
+8. FINAL OUTPUT FORMAT
+
+Please output your review in this order:
+
+Security Notes
+
+Missing / Misconfigured Env Vars
+
+Architecture & Cleanup Suggestions
+
+Community Chat Proposal (with schema + route/component suggestion)
+
+Developer Hand-off Notes (what the dev team should do next)
+
+Be concrete — name files, name components, name routes.
+
+Extra recommendations from me (assistant) you can include in the review
+
+Add a small lib/constants.ts to hold:
+
+DAO wallet list
+
+NFT collection list
+
+Snapshot space
+
+KING contract
+so we don’t repeat strings everywhere.
+
+Add a lib/chains.ts or similar to make it obvious we’re on Ethereum mainnet (chainId = 1), since we also have a Solana controller.
+
+Add a guard in API routes that accept wallet addresses to validate it’s a proper EVM address (and in the future, a Solana validator).
