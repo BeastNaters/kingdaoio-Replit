@@ -37,7 +37,7 @@ export function ExportDialog() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [format, setFormat] = useState<ExportFormat>("csv");
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("csv");
   const [dateRange, setDateRange] = useState<DateRange>({
     from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
     to: new Date(),
@@ -54,7 +54,7 @@ export function ExportDialog() {
         params.append("endDate", dateRange.to.toISOString());
       }
 
-      const url = `/api/export/${format}?${params.toString()}`;
+      const url = `/api/export/${exportFormat}?${params.toString()}`;
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -69,7 +69,7 @@ export function ExportDialog() {
       const contentDisposition = response.headers.get("Content-Disposition");
       const filename = contentDisposition
         ? contentDisposition.split("filename=")[1].replace(/"/g, "")
-        : `treasury-export-${new Date().toISOString().split("T")[0]}.${format}`;
+        : `treasury-export-${new Date().toISOString().split("T")[0]}.${exportFormat}`;
       
       link.download = filename;
       document.body.appendChild(link);
@@ -79,7 +79,7 @@ export function ExportDialog() {
 
       toast({
         title: "Export Successful",
-        description: `Treasury data exported as ${format.toUpperCase()}`,
+        description: `Treasury data exported as ${exportFormat.toUpperCase()}`,
       });
 
       setOpen(false);
@@ -118,8 +118,8 @@ export function ExportDialog() {
           <div className="grid gap-2">
             <Label htmlFor="format">Format</Label>
             <Select
-              value={format}
-              onValueChange={(value) => setFormat(value as ExportFormat)}
+              value={exportFormat}
+              onValueChange={(value) => setExportFormat(value as ExportFormat)}
             >
               <SelectTrigger id="format" data-testid="select-export-format">
                 <SelectValue />
