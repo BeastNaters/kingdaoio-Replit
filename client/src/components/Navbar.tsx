@@ -1,14 +1,11 @@
 import { Link, useLocation } from "wouter";
-import { useAccount } from "wagmi";
 import { WalletConnect } from "./WalletConnect";
 import { Settings } from "lucide-react";
-
-const ADMIN_ADDRESSES = (import.meta.env.VITE_ADMIN_ADDRESSES || '').toLowerCase().split(',').filter(Boolean);
+import { useAdminStatus } from "@/hooks/useAdminStatus";
 
 export function Navbar() {
   const [location] = useLocation();
-  const { address } = useAccount();
-  const isAdmin = address && ADMIN_ADDRESSES.includes(address.toLowerCase());
+  const { isAdmin } = useAdminStatus();
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
