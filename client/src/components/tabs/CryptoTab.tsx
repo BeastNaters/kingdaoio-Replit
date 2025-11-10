@@ -1,11 +1,15 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Coins, Lightbulb } from "lucide-react";
+import { Coins, Lightbulb, TrendingUp, Wallet } from "lucide-react";
 import { PortfolioChart } from "@/components/PortfolioChart";
 import { PerformanceChart } from "@/components/PerformanceChart";
 import { DataTable } from "@/components/DataTable";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TreasurySnapshot } from "@shared/treasury-types";
+import { dcaPortfolio, otherTreasuryTokens } from "@shared/daoWallets";
+import { getTokenPrices, calculateTotalValue, calculateAllocation, type TokenPrice } from "@/lib/pricing";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 
 interface CryptoTabProps {
   snapshot?: TreasurySnapshot;
@@ -14,7 +18,31 @@ interface CryptoTabProps {
   isLoadingHistory: boolean;
 }
 
+const COLORS = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1'];
+
 export function CryptoTab({ snapshot, isLoadingSnapshot, historicalSnapshots, isLoadingHistory }: CryptoTabProps) {
+  const [dcaPrices, setDcaPrices] = useState<TokenPrice>({});
+  const [otherPrices, setOtherPrices] = useState<TokenPrice>({});
+  const [isLoadingPrices, setIsLoadingPrices] = useState(true);
+
+  useEffect(() => {
+    async function fetchPrices() {
+      setIsLoadingPrices(true);
+      const dcaSymbols = dcaPortfolio.map(t => t.symbol);
+      const otherSymbols = otherTreasuryTokens.map(t => t.symbol);
+      
+      const [dcaP, otherP] = await Promise.all([
+        getTokenPrices(dcaSymbols),
+        getTokenPrices(otherSymbols)
+      ]);
+      
+      setDcaPrices(dcaP);
+      setOtherPrices(otherP);
+      setIsLoadingPrices(false);
+    }
+    fetchPrices();
+  }, []);
+
   const performanceData = historicalSnapshots && historicalSnapshots.length > 0
     ? historicalSnapshots.map(s => ({
         date: new Date(s.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -23,6 +51,17 @@ export function CryptoTab({ snapshot, isLoadingSnapshot, historicalSnapshots, is
     : [];
 
   const totalCryptoValue = snapshot?.tokens?.reduce((sum, token) => sum + (token.usdValue || 0), 0) || 0;
+  
+  const dcaTotalValue = calculateTotalValue(dcaPortfolio, dcaPrices);
+  const dcaAllocations = calculateAllocation(dcaPortfolio, dcaPrices);
+  
+  const otherTokensTotal = calculateTotalValue(otherTreasuryTokens, otherPrices);
+  const otherAllocations = calculateAllocation(otherTreasuryTokens, otherPrices);
+
+  const dcaChartData = dcaAllocations.map(item => ({
+    name: item.symbol,
+    value: item.usdValue,
+  }));
 
   return (
     <div className="space-y-6" data-testid="tab-crypto">
@@ -92,6 +131,218 @@ export function CryptoTab({ snapshot, isLoadingSnapshot, historicalSnapshots, is
         ) : (
           <PerformanceChart data={performanceData} />
         )}
+      </div>
+
+      {/* DCA Portfolio Section */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-6 h-6 text-primary" />
+          <h3 className="text-xl font-bold font-heading" data-testid="heading-dca-portfolio">DCA Portfolio</h3>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Dollar-Cost Averaging strategy holdings
+        </p>
+
+        <Card className="rounded-2xl border border-accent/20 bg-gradient-to-br from-accent/10 to-accent/5 backdrop-blur-xl">
+          <CardHeader>
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Coins className="w-5 h-5" />
+              Total DCA Portfolio Value
+            </CardTitle>
+            <CardDescription>
+              Combined value of all DCA positions
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {isLoadingPrices ? (
+                <Skeleton className="h-16 rounded" />
+              ) : (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold font-heading" data-testid="value-dca-total">
+                    ${dcaTotalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  </span>
+                  <span className="text-muted-foreground">USD</span>
+                </div>
+              )}
+              <div className="p-4 rounded-lg bg-muted/30 border border-muted flex gap-3">
+                <Lightbulb className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Mock Data:</strong> Using placeholder prices. Replace with live Web3 price API (CoinGecko, Moralis Token Price, Alchemy, or 1inch Price Oracle).
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* DCA Allocation Chart */}
+          <Card className="rounded-2xl">
+            <CardHeader>
+              <CardTitle>DCA Portfolio Allocation</CardTitle>
+              <CardDescription>Distribution by USD value</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingPrices ? (
+                <Skeleton className="h-80 rounded" />
+              ) : (
+                <ResponsiveContainer width="100%" height={320}>
+                  <PieChart>
+                    <Pie
+                      data={dcaChartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {dcaChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* DCA Holdings Table */}
+          <Card className="rounded-2xl">
+            <CardHeader>
+              <CardTitle>DCA Holdings</CardTitle>
+              <CardDescription>Token amounts and values</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingPrices ? (
+                <Skeleton className="h-80 rounded" />
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-4 gap-2 text-xs font-medium text-muted-foreground pb-2 border-b">
+                    <div>Token</div>
+                    <div className="text-right">Amount</div>
+                    <div className="text-right">USD Value</div>
+                    <div className="text-right">% Portfolio</div>
+                  </div>
+                  {dcaAllocations.map((token, index) => (
+                    <div key={token.symbol} className="grid grid-cols-4 gap-2 text-sm" data-testid={`dca-token-${index}`}>
+                      <div className="font-medium">{token.symbol}</div>
+                      <div className="text-right text-muted-foreground">{token.amount.toLocaleString()}</div>
+                      <div className="text-right">${token.usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+                      <div className="text-right text-muted-foreground">{token.percentage.toFixed(1)}%</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* DCA Performance Placeholder */}
+        <Card className="rounded-2xl border-dashed">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              DCA Portfolio Performance
+            </CardTitle>
+            <CardDescription>
+              Historical performance tracking
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="p-6 rounded-lg bg-muted/30 border border-muted flex gap-3">
+              <Lightbulb className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Integration Required</p>
+                <p className="text-sm text-muted-foreground">
+                  Hook this up to historical token price data to track DCA performance over time.
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  <strong>Recommended:</strong> Store periodic snapshots of DCA holdings in Supabase, then fetch historical prices from CoinGecko Historical API or similar service to calculate performance trends.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Other Treasury Tokens Section */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Wallet className="w-6 h-6 text-primary" />
+          <h3 className="text-xl font-bold font-heading" data-testid="heading-other-tokens">Other Treasury Tokens</h3>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Additional token holdings outside DCA portfolio
+        </p>
+
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Coins className="w-5 h-5" />
+              Total Other Tokens Value
+            </CardTitle>
+            <CardDescription>
+              Combined value of non-DCA token positions
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {isLoadingPrices ? (
+                <Skeleton className="h-16 rounded" />
+              ) : (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold font-heading" data-testid="value-other-tokens-total">
+                    ${otherTokensTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  </span>
+                  <span className="text-muted-foreground">USD</span>
+                </div>
+              )}
+              <div className="p-4 rounded-lg bg-muted/30 border border-muted flex gap-3">
+                <Lightbulb className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Mock Data:</strong> Using placeholder prices. Integrate with Web3 price APIs for real-time valuations.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle>Token Holdings</CardTitle>
+            <CardDescription>Other treasury token positions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingPrices ? (
+              <Skeleton className="h-80 rounded" />
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-4 gap-2 text-xs font-medium text-muted-foreground pb-2 border-b">
+                  <div>Token</div>
+                  <div className="text-right">Amount</div>
+                  <div className="text-right">USD Value</div>
+                  <div className="text-right">% of Total</div>
+                </div>
+                {otherAllocations.map((token, index) => (
+                  <div key={token.symbol} className="grid grid-cols-4 gap-2 text-sm" data-testid={`other-token-${index}`}>
+                    <div className="font-medium">{token.symbol}</div>
+                    <div className="text-right text-muted-foreground">{token.amount.toLocaleString()}</div>
+                    <div className="text-right">${token.usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+                    <div className="text-right text-muted-foreground">{token.percentage.toFixed(1)}%</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
     </div>
