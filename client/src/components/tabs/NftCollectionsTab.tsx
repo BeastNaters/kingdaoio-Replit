@@ -1,3 +1,15 @@
+// NOTE: For NFT collection valuation, it is OK to use Dune Analytics for floor price data for KING specifically.
+// For all other data (token balances, multisigs, wallets), prefer Web3 APIs.
+// 
+// Dune Analytics integration for KING NFT floor price:
+// - Query ID: Create a Dune query to fetch KING NFT floor price from OpenSea/Reservoir data
+// - Update interval: Every 15-30 minutes to track floor price changes
+// - Endpoint: /api/dune/nft-floors (returns floor prices for all collections)
+//
+// For Rollbots and Sports Rollbots floor prices:
+// - Primary option: Use Dune Analytics for consistency
+// - Alternative: OpenSea API or Reservoir API for real-time floor prices
+
 import { ExternalLink, Copy, CheckCircle2, Lightbulb } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

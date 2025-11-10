@@ -128,3 +128,66 @@ export default function Dashboard() {
     </div>
   );
 }
+
+// ============================================================================
+// DEV INTEGRATION LOG
+// ============================================================================
+// This log tracks what still needs to be wired up for full treasury dashboard functionality.
+// All tabs currently use mock/placeholder data for demonstration purposes.
+//
+// PRIORITY 1 - Token Price Integration:
+// 1. Replace mock token prices in Crypto/DCA tab with real price API (CoinGecko, Moralis, Alchemy).
+//    - Current: Mock prices in client/src/lib/pricing.ts
+//    - Target: CoinGecko API: https://api.coingecko.com/api/v3/simple/price
+//    - Alternative: Moralis Token Price API: https://docs.moralis.io/web3-data-api/evm/reference/get-token-price
+//    - Alternative: 1inch Price Oracle: https://api.1inch.dev/price/v1.1/1
+//
+// PRIORITY 2 - Multi-Sig Wallet Balances:
+// 2. For Multi-Sig tab: call Safe Transaction Service to get live USD balances.
+//    - Current: Mock balances in MultiSigTab.tsx
+//    - Target: https://safe-transaction-mainnet.safe.global/api/v1/safes/{address}/balances/usd/
+//    - Wallets to query: DAO Fund, Reward Wallet, Incentivization Bucket (addresses in shared/daoWallets.ts)
+//
+// PRIORITY 3 - DAO Wallet Balances:
+// 3. For DAO wallet balances: call on-chain RPC for ETH, and Solana RPC for the SOL controller.
+//    - Current: Mock balances in DaoWalletsTab.tsx
+//    - ETH wallets: Use ethers.js/viem + Alchemy/Moralis for token balances
+//    - SOL wallet (Gok7zfZ2aZ6ftvYtXhRR2KR8dzu2cKZLDeqvDhNQvipT): Use Solana RPC / Helius / QuickNode
+//    - Note: Solana integration requires separate client library and RPC endpoint
+//
+// PRIORITY 4 - Tactical Wallet Tracking:
+// 4. For Tactical wallets: fetch per-wallet token/NFT balances via web3 APIs
+//    - Current: Mock balances in TacticalWalletsTab.tsx
+//    - Integration: Alchemy NFT API + Token API or Moralis equivalents
+//    - Wallets: Dogepound & ZK Race, Wilder World (addresses in shared/daoWallets.ts)
+//
+// PRIORITY 5 - NFT Floor Price Data:
+// 5. For NFT Collections: integrate Dune Analytics ONLY for KING NFT floor data (as requested).
+//    - Current: Hardcoded collection data in shared/daoNfts.ts
+//    - Target: Dune Analytics for KING floor price specifically
+//    - Alternative: OpenSea API or Reservoir for Rollbots/Sports Rollbots floor prices
+//    - Endpoint to create: /api/dune/nft-floors (returns floor prices for all collections)
+//
+// PRIORITY 6 - Data Persistence:
+// 6. Move hardcoded wallet and NFT collection data into Supabase tables once schema is ready.
+//    - Current: Data in shared/daoWallets.ts and shared/daoNfts.ts
+//    - Target: Create Supabase tables for:
+//      - dao_wallets (address, label, chain, wallet_type)
+//      - nft_collections (contract_address, name, description, token_ids)
+//    - Note: treasury_snapshots table also needs manual creation (SQL in CODEBASE_AUDIT.md)
+//
+// PRIORITY 7 - DCA Portfolio Performance:
+// 7. Implement DCA Portfolio Performance tracking with historical price data
+//    - Current: Placeholder component in CryptoTab.tsx
+//    - Target: Store periodic snapshots of DCA holdings in Supabase
+//    - Fetch historical prices from CoinGecko Historical API
+//    - Calculate performance trends (cost basis vs current value)
+//
+// IMPORTANT NOTES:
+// - DO NOT use Dune Analytics for general token prices, wallet balances, or multi-sig data
+// - ONLY use Dune for NFT collection analytics (specifically KING NFT floor price)
+// - Prefer Web3 APIs (RPC, Alchemy, Moralis, CoinGecko) for all other integrations
+// - All mock data is clearly labeled in the UI with integration notes
+// - Each tab component has detailed TODO comments at the top with integration guidance
+//
+// ============================================================================
