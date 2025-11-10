@@ -1,0 +1,385 @@
+Generate the full codebase, including pages, components, hooks, utils, API routes, and configuration. Use modern, sleek, Web3-vibe UI (dark theme, gradients, glassmorphism) suitable for a DAO treasury dashboard.
+
+========================================
+PROJECT NAME
+========================================
+KingDAO Treasury Dashboard (token-gated for Kong NFT holders)
+
+========================================
+HIGH-LEVEL GOAL
+========================================
+Build a token-gated treasury + portfolio dashboard for the DAO that:
+1. Lets a user connect their wallet on the landing page.
+2. Verifies ON ETHEREUM MAINNET that the connected wallet holds the Kong NFT at this exact contract:
+   - **Kong NFT Contract (ERC721):** `0x6E3a2e08A88186f41ECD90E0683d9cA0983a4328`
+3. If the user is a holder, allow access to the dashboard routes.
+4. Aggregate treasury data from:
+   - Gnosis Safe (multi-sig) wallet(s),
+   - Dune Analytics queries (token prices, NFT floors, wallet balances),
+   - Google Sheets (manual/off-chain treasury entries),
+   - on-chain reads via RPC,
+   - Supabase cache.
+5. Show DAO community data from:
+   - Snapshot **space**: `kongsdao.eth`
+   - Discord announcements (mock or simple feed)
+6. Show user-level NFT display.
+7. Present all data in a modern dashboard with charts, filters, and tables.
+
+========================================
+STACK / TECH REQUIREMENTS
+========================================
+- Framework: **Next.js 14+** (App Router) with **TypeScript**.
+- UI: **Tailwind CSS** + **shadcn/ui** for consistent components.
+- Wallet: **wagmi** + **viem** + **Reown/WalletConnect toolkit** for wallet connect.
+- Charts: use a Next.js-compatible chart library (e.g. Recharts) to show allocation + history.
+- Web3: use **viem** first; ethers.js acceptable for utilities.
+- Backend/API: use **Next.js Route Handlers** under `app/api/.../route.ts` to proxy external services (Dune, Google Sheets, Snapshot, Safe, Discord).
+- Database/cache: **Supabase** client (read/write endpoints).
+- Target chain: **Ethereum mainnet** (because the NFT contract is on mainnet).
+
+========================================
+ENVIRONMENT VARIABLES
+========================================
+Create `.env.example` in the root. The app must read from `process.env` on the server. Use the REAL values you know, and placeholders for the rest.
+
+```env
+# Web3 Configuration
+NEXT_PUBLIC_RPC_URL=https://mainnet.infura.io/v3/your-project-id
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x6E3a2e08A88186f41ECD90E0683d9cA0983a4328
+NEXT_PUBLIC_CHAIN_ID=1
+
+# Dune Analytics Configuration
+DUNE_API_KEY=your-dune-api-key
+DUNE_TOKEN_PRICES_QUERY_ID=your-token-prices-query-id
+DUNE_NFT_FLOOR_PRICES_QUERY_ID=your-nft-floor-prices-query-id
+DUNE_WALLET_BALANCES_QUERY_ID=your-wallet-balances-query-id
+
+# Google Sheets Configuration
+GOOGLE_CLIENT_EMAIL=your-service-account-email
+GOOGLE_PRIVATE_KEY="your-service-account-private-key"
+TREASURY_SPREADSHEET_ID=your-spreadsheet-id
+
+# Snapshot / Community
+SNAPSHOT_SPACE=kongsdao.eth
+
+# Gnosis Safe (Treasury)
+SAFE_TX_SERVICE_URL=https://safe-transaction-mainnet.safe.global
+SAFE_ADDRESS=0xYourSafeAddress
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+Implementation notes:
+
+Parse GOOGLE_PRIVATE_KEY to replace \n.
+
+If any required env var is missing, the API route should return { success: false, message: 'Missing ...' }.
+
+========================================
+ROUTE / PAGE STRUCTURE
+
+Create the app with this structure:
+
+/ (Public Landing)
+
+Hero with “Connect Wallet”
+
+Short DAO blurb
+
+If wallet connected → show button “Enter Dashboard”
+
+Dark, Web3 aesthetic
+
+/dashboard (Protected / Token-Gated)
+
+On load, check wallet connection
+
+Call /api/auth/holdings?address=... to verify NFT ownership against 0x6E3a2e08A88186f41ECD90E0683d9cA0983a4328
+
+If NOT holder → render token-gated component
+
+If holder → render main dashboard with:
+
+Stat cards: Total Treasury Value, # of Wallets, # of NFTs
+
+Token balances table (sortable/filterable)
+
+Portfolio allocation chart (donut)
+
+Historical performance chart (line; can be from Supabase or mock)
+
+“Multi-Sig (Safe) Assets” section
+
+“Off-Chain / Sheets” section
+
+/nfts (Protected)
+
+Shows NFTs owned by the connected wallet
+
+Pull floor prices from Dune NFT floor query
+
+Grid with image, collection name, floor price badge, estimated USD value
+
+If no NFTs → show empty state
+
+/community (Protected)
+
+Fetch Snapshot proposals for kongsdao.eth
+
+List title, state (active/closed), start/end, and link to Snapshot
+
+Below that, list latest Discord announcements (mock JSON or feed)
+
+If not holder → show token-gated screen
+
+========================================
+TOKEN-GATED LOGIC (IMPORTANT)
+
+Implement a reusable server-side verifier for the Kong NFT:
+
+File: lib/isKongHolder.ts
+
+Input: address: string
+
+Logic:
+
+Use RPC from NEXT_PUBLIC_RPC_URL
+
+Use ERC721 ABI with balanceOf(address) against contract:
+
+0x6E3a2e08A88186f41ECD90E0683d9cA0983a4328
+
+If balanceOf > 0, return true
+
+Else return false
+
+Expose this through an API route:
+
+GET /api/auth/holdings?address=0x...
+
+Returns: { isHolder: boolean, address: string }
+
+On the client:
+
+Create a hook useKongGate() that:
+
+Reads the connected address (wagmi)
+
+Calls /api/auth/holdings
+
+Returns { isHolder, isLoading, error }
+
+If !isHolder show <TokenGated />
+
+Render a nice <TokenGated /> component:
+
+Title: “Kong NFT Required”
+
+Text: “This area is restricted to holders of the official Kong NFT.”
+
+Button: “Connect a different wallet”
+
+========================================
+INTEGRATIONS
+
+Dune (Token Prices, NFT Floors, Wallet Balances)
+
+Create lib/dune.ts
+
+Helper to call: https://api.dune.com/api/v1/query/${queryId}/results
+
+Include x-dune-api-key: process.env.DUNE_API_KEY
+
+API routes:
+
+GET /api/dune/token-prices
+
+GET /api/dune/nft-floors
+
+GET /api/dune/wallet-balances
+
+Map Dune rows into internal types.
+
+Google Sheets (Off-Chain Treasury)
+
+Create lib/googleSheets.ts
+
+Use service account creds from env
+
+Read from TREASURY_SPREADSHEET_ID, sheet name: Treasury
+
+Columns:
+
+Date
+
+Description
+
+Category
+
+AmountUSD
+
+Source
+
+API route: GET /api/treasury/google-sheets
+
+On dashboard, render a table “Off-Chain / Manual Entries”
+
+Gnosis Safe (Multi-Sig Treasury)
+
+Create lib/safe.ts
+
+Use SAFE_TX_SERVICE_URL and SAFE_ADDRESS
+
+Fetch balances: /api/v1/safes/{address}/balances/usd/
+
+Normalize to TokenBalance[]
+
+API route: GET /api/treasury/safe
+
+Display in dashboard as a card + list
+
+Snapshot (Community)
+
+Snapshot space is exactly: kongsdao.eth
+
+Create API route: GET /api/snapshot/proposals
+
+Fetch proposals from Snapshot Hub
+
+Render on /community page
+
+Show status badge (active, closed, pending)
+
+Discord (Announcements)
+
+Create API route: GET /api/discord/announcements
+
+For now, you can return static JSON or read from a configured endpoint
+
+Render in a styled list
+
+Supabase (Cache)
+
+Create lib/supabase.ts to init client
+
+API route: /api/treasury/snapshots
+
+GET → latest snapshot
+
+POST → upsert (can be stubbed)
+
+The dashboard should try to read cached aggregated data first, then fetch live.
+
+========================================
+DATA TYPES
+
+Create types/treasury.ts:
+export type TokenBalance = {
+  symbol: string;
+  name?: string;
+  amount: number;
+  usdPrice?: number;
+  usdValue?: number;
+  source: 'dune' | 'safe' | 'onchain' | 'sheets';
+};
+
+export type NftHolding = {
+  collection: string;
+  tokenId: string;
+  image?: string;
+  floorPrice?: number;
+  estimatedValueUsd?: number;
+};
+
+export type TreasurySnapshot = {
+  timestamp: string;
+  totalUsdValue: number;
+  tokens: TokenBalance[];
+  nfts: NftHolding[];
+  wallets: { address: string; label?: string; chainId?: number }[];
+};
+All API routes should normalize to these types to simplify the UI.
+
+========================================
+UI / COMPONENTS
+
+Create the following under components/:
+
+Navbar.tsx – logo/text “KingDAO”, links to Dashboard / NFTs / Community, wallet connect button
+
+WalletConnectButton.tsx – uses wagmi + Reown modal
+
+StatCard.tsx – title, value, subtext
+
+PortfolioChart.tsx – donut/pie using token balances
+
+PerformanceChart.tsx – line chart for historical values
+
+DataTable.tsx – generic, sortable, for token balances
+
+NftGrid.tsx – cards with NFT image, collection, floor price
+
+TokenGated.tsx – full screen, dark, CTA
+
+AlertBanner.tsx – for API errors
+
+SectionHeader.tsx – consistent titles
+
+Styling:
+
+Dark background: bg-slate-950 or bg-neutral-950
+
+Borders: border border-white/5
+
+Gradients: purple/cyan
+
+Rounded: rounded-2xl
+
+Spacing: p-6 sections
+
+========================================
+LANDING PAGE CONTENT
+
+app/page.tsx should include:
+
+Headline: “KingDAO Treasury Dashboard”
+
+Subhead: “Real-time, token-gated treasury visibility for Kong NFT holders.”
+
+Button: “Connect Wallet”
+
+If wallet is connected, show: “Enter Dashboard”
+
+Background gradient
+
+========================================
+ERROR HANDLING
+
+Every /api/... route must wrap external requests in try/catch
+
+On error: return Response.json({ success: false, message: 'Dune request failed' }, { status: 500 })
+
+Client components must show loading skeletons
+
+========================================
+WHAT TO OUTPUT
+
+Generate:
+
+Next.js 14 App Router structure
+
+Pages: /, /dashboard, /nfts, /community
+
+API routes: /api/dune/*, /api/treasury/*, /api/auth/holdings, /api/snapshot/proposals, /api/discord/announcements, /api/treasury/snapshots
+
+lib/ files for dune, sheets, safe, snapshot, discord, supabase, isKongHolder
+
+components/ as listed
+
+.env.example with the exact keys above
+
+wagmi/reown config targeting Ethereum mainnet (chainId = 1)
+
+In comments, document where to plug in real Dune query IDs, Safe address, Google sheet ID
