@@ -107,32 +107,32 @@ All environment variable usage has been audited by scanning `process.env.*` and 
 
 | Variable | Used In | Service | Type | Notes |
 |----------|---------|---------|------|-------|
-| `DATABASE_URL` | `server/db.ts`, `drizzle.config.ts` | PostgreSQL | Server | Drizzle ORM connection string |
-| `ETHEREUM_RPC_URL` | `server/lib/isKongHolder.ts` | Ethereum Mainnet RPC | Server | NFT ownership verification (primary) |
-| `NEXT_PUBLIC_RPC_URL` | `server/lib/isKongHolder.ts` | Ethereum Mainnet RPC | Server | **Fallback** if `ETHEREUM_RPC_URL` not set |
-| `VITE_ETHEREUM_RPC_URL` | `client/src/lib/wagmi.ts` | Ethereum Mainnet RPC | **Public** | Frontend wallet connection (must have `VITE_` prefix) |
-| `NEXT_PUBLIC_SUPABASE_URL` | `server/lib/supabase.ts` | Supabase | **Public** | Supabase project URL (legacy name, works with Vite) |
-| `SUPABASE_SERVICE_ROLE_KEY` | `server/lib/supabase.ts` | Supabase | **Server-only** | **🔒 NEVER expose on client!** |
+| `DATABASE_URL` | `server/db.ts:8,14`<br>`drizzle.config.ts:3,12` | PostgreSQL | Server | Drizzle ORM connection string |
+| `ETHEREUM_RPC_URL` | `server/lib/isKongHolder.ts:13` | Ethereum Mainnet RPC | Server | NFT ownership verification (primary) |
+| `NEXT_PUBLIC_RPC_URL` | `server/lib/isKongHolder.ts:13` | Ethereum Mainnet RPC | Server | **Fallback** if `ETHEREUM_RPC_URL` not set |
+| `VITE_ETHEREUM_RPC_URL` | `client/src/lib/wagmi.ts:7` | Ethereum Mainnet RPC | **Public** | Frontend wallet connection (must have `VITE_` prefix) |
+| `NEXT_PUBLIC_SUPABASE_URL` | `server/lib/supabase.ts:3` | Supabase | **Public** | Supabase project URL (legacy name, works with Vite) |
+| `SUPABASE_SERVICE_ROLE_KEY` | `server/lib/supabase.ts:4` | Supabase | **Server-only** | **🔒 NEVER expose on client!** |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Frontend (unused) | Supabase | **Public** | Anon key for client-side queries (currently unused) |
-| `MORALIS_API_KEY` | `server/lib/moralis.ts` | Moralis | Server | NFT holdings & floor prices |
-| `ADMIN_ADDRESSES` | `server/middleware/adminAuth.ts` | Admin Auth | Server | Comma-separated wallet addresses |
-| `VITE_ADMIN_ADDRESSES` | `client/src/components/AdminRoute.tsx` | Admin Auth | **Public** | Same addresses, client-side check (must have `VITE_` prefix) |
+| `MORALIS_API_KEY` | `server/lib/moralis.ts:27,93` | Moralis | Server | NFT holdings & floor prices |
+| `ADMIN_ADDRESSES` | `server/middleware/adminAuth.ts:4` | Admin Auth | Server | Comma-separated wallet addresses |
+| `VITE_ADMIN_ADDRESSES` | `client/src/components/Navbar.tsx:6`<br>`client/src/components/AdminRoute.tsx:6` | Admin Auth | **Public** | Same addresses, client-side check (must have `VITE_` prefix) |
 
 #### **Optional - Graceful Degradation**
 
 | Variable | Used In | Service | Default Behavior |
 |----------|---------|---------|------------------|
-| `DUNE_API_KEY` | `server/lib/dune.ts` | Dune Analytics | Returns mock token prices |
-| `DUNE_TOKEN_PRICES_QUERY_ID` | `server/lib/dune.ts` | Dune Analytics | Returns mock prices |
-| `DUNE_NFT_FLOOR_PRICES_QUERY_ID` | `server/lib/dune.ts` | Dune Analytics | Returns mock floor prices |
-| `DUNE_WALLET_BALANCES_QUERY_ID` | `server/lib/dune.ts` | Dune Analytics | Returns mock balances |
-| `SAFE_ADDRESS` | `server/lib/safe.ts`, `server/routes.ts` | Gnosis Safe | Returns empty array `[]` |
-| `SAFE_TX_SERVICE_URL` | `server/lib/safe.ts` | Gnosis Safe | Defaults to `https://safe-transaction-mainnet.safe.global` |
-| `TREASURY_SPREADSHEET_ID` | `server/lib/googleSheets.ts` | Google Sheets | Throws error (service disabled) |
-| `SNAPSHOT_SPACE` | `server/lib/snapshot.ts` | Snapshot | Defaults to `kongsdao.eth` |
-| `SNAPSHOT_INTERVAL` | `server/lib/scheduler.ts` | Snapshot Scheduler | Defaults to `3600000` (1 hour) |
-| `SESSION_SECRET` | Session encryption | Express Session | Random string recommended |
-| `PORT` | `server/index.ts` | Express Server | Defaults to `5000` |
+| `DUNE_API_KEY` | `server/lib/dune.ts:4` | Dune Analytics | Returns mock token prices |
+| `DUNE_TOKEN_PRICES_QUERY_ID` | `server/lib/dune.ts:25` | Dune Analytics | Returns mock prices |
+| `DUNE_NFT_FLOOR_PRICES_QUERY_ID` | `server/lib/dune.ts:49` | Dune Analytics | Returns mock floor prices |
+| `DUNE_WALLET_BALANCES_QUERY_ID` | `server/lib/dune.ts:71` | Dune Analytics | Returns mock balances |
+| `SAFE_ADDRESS` | `server/lib/safe.ts:4`<br>`server/routes.ts:330` | Gnosis Safe | Returns empty array `[]` |
+| `SAFE_TX_SERVICE_URL` | `server/lib/safe.ts:1` | Gnosis Safe | Defaults to `https://safe-transaction-mainnet.safe.global` |
+| `TREASURY_SPREADSHEET_ID` | `server/lib/googleSheets.ts:51` | Google Sheets | Throws error (service disabled) |
+| `SNAPSHOT_SPACE` | `server/lib/snapshot.ts:2` | Snapshot | Defaults to `kongsdao.eth` |
+| `SNAPSHOT_INTERVAL` | `server/lib/scheduler.ts:133` | Snapshot Scheduler | Defaults to `3600000` (1 hour) |
+| `SESSION_SECRET` | Session encryption (unused) | Express Session | Random string recommended |
+| `PORT` | `server/index.ts:75` | Express Server | Defaults to `5000` |
 
 #### **Replit-Specific (Auto-populated by Platform)**
 
@@ -146,47 +146,49 @@ All environment variable usage has been audited by scanning `process.env.*` and 
 
 ### Complete Variable Count Breakdown
 
-**Total**: 27 environment variables
+**Total**: 27 unique environment variables
 
 **By Category**:
-- Required for basic app functionality: 10 variables
-  - `DATABASE_URL`
-  - `ETHEREUM_RPC_URL`
-  - `NEXT_PUBLIC_RPC_URL` (fallback)
-  - `VITE_ETHEREUM_RPC_URL`
-  - `NEXT_PUBLIC_SUPABASE_URL`
-  - `SUPABASE_SERVICE_ROLE_KEY`
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-  - `MORALIS_API_KEY`
-  - `ADMIN_ADDRESSES`
-  - `VITE_ADMIN_ADDRESSES`
+- **Required for basic app functionality**: 10 variables
+  1. `DATABASE_URL`
+  2. `ETHEREUM_RPC_URL`
+  3. `NEXT_PUBLIC_RPC_URL` (fallback for server-side NFT check)
+  4. `VITE_ETHEREUM_RPC_URL` (frontend wallet connection)
+  5. `NEXT_PUBLIC_SUPABASE_URL`
+  6. `SUPABASE_SERVICE_ROLE_KEY`
+  7. `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  8. `MORALIS_API_KEY`
+  9. `ADMIN_ADDRESSES`
+  10. `VITE_ADMIN_ADDRESSES`
 
-- Optional (graceful degradation): 11 variables
-  - `DUNE_API_KEY`
-  - `DUNE_TOKEN_PRICES_QUERY_ID`
-  - `DUNE_NFT_FLOOR_PRICES_QUERY_ID`
-  - `DUNE_WALLET_BALANCES_QUERY_ID`
-  - `SAFE_ADDRESS`
-  - `SAFE_TX_SERVICE_URL`
-  - `TREASURY_SPREADSHEET_ID`
-  - `SNAPSHOT_SPACE`
-  - `SNAPSHOT_INTERVAL`
-  - `SESSION_SECRET`
-  - `PORT`
+- **Optional (graceful degradation)**: 11 variables
+  1. `DUNE_API_KEY`
+  2. `DUNE_TOKEN_PRICES_QUERY_ID`
+  3. `DUNE_NFT_FLOOR_PRICES_QUERY_ID`
+  4. `DUNE_WALLET_BALANCES_QUERY_ID`
+  5. `SAFE_ADDRESS`
+  6. `SAFE_TX_SERVICE_URL`
+  7. `TREASURY_SPREADSHEET_ID`
+  8. `SNAPSHOT_SPACE`
+  9. `SNAPSHOT_INTERVAL`
+  10. `SESSION_SECRET`
+  11. `PORT`
 
-- Replit platform (auto-populated): 5 variables
-  - `REPLIT_CONNECTORS_HOSTNAME`
-  - `REPL_IDENTITY`
-  - `WEB_REPL_RENEWAL`
-  - `REPL_ID`
-  - `NODE_ENV`
+- **Replit platform (auto-populated)**: 5 variables
+  1. `REPLIT_CONNECTORS_HOSTNAME`
+  2. `REPL_IDENTITY`
+  3. `WEB_REPL_RENEWAL`
+  4. `REPL_ID`
+  5. `NODE_ENV`
 
-- Frontend-accessible (must have `VITE_` or `NEXT_PUBLIC_` prefix): 1 variable
-  - `VITE_ETHEREUM_RPC_URL` (required)
-  - `VITE_ADMIN_ADDRESSES` (required)
-  - `NEXT_PUBLIC_SUPABASE_URL` (required)
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (required but unused)
-  - `NEXT_PUBLIC_RPC_URL` (fallback server-side check)
+- **Frontend accessibility note**: 1 critical variable
+  - Variables accessible on client MUST have `VITE_` or `NEXT_PUBLIC_` prefix
+  - Client-accessible variables from required list:
+    - `VITE_ETHEREUM_RPC_URL` ✅
+    - `VITE_ADMIN_ADDRESSES` ✅
+    - `NEXT_PUBLIC_SUPABASE_URL` ✅
+    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` ✅ (unused)
+    - `NEXT_PUBLIC_RPC_URL` ✅ (also used server-side as fallback)
 
 ### Environment Variable Checklist
 
