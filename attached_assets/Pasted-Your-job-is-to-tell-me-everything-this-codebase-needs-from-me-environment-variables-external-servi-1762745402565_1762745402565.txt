@@ -1,0 +1,165 @@
+Your job is to tell me everything this codebase needs from me (environment variables, external services, database tables, API keys, schema, and config) so that all integrations work smoothly when I hand it off to my dev team.
+
+The app goals (so you know the intention):
+
+Next.js/React dashboard for a DAO
+
+Token-gated by holding a specific NFT on Ethereum mainnet
+
+NFT contract: 0x6E3a2e08A88186f41ECD90E0683d9cA0983a4328
+
+Snapshot space: kongsdao.eth
+
+Integrations: Dune Analytics, Gnosis Safe (multi-sig), Google Sheets (service account), Supabase (for caching/storing snapshots), and some community views (Snapshot, Discord)
+
+I need you to read the codebase and produce a step-by-step, very explicit checklist of what I (the project owner) must set up, so that another developer can pick this up and finish it.
+
+Do the audit in SECTIONS like this:
+
+1. Repo Scan / Structure
+
+Identify the main framework (likely Next.js) and routing style (App Router vs Pages Router).
+
+List the top-level folders you see (app/, pages/, components/, lib/, types/, app/api/..., etc.).
+
+Tell me which parts look like MVP/placeholder code (e.g. mock data, commented-out fetches).
+
+Point out any hardcoded addresses, query IDs, or placeholder strings related to Web3.
+
+2. Environment Variables Required
+
+Scan the codebase for all process.env.* usages.
+
+Output a consolidated list of every env var the app expects.
+
+For each env var, tell me:
+
+where it’s used (file/path),
+
+what service it belongs to (Dune, Google, Supabase, Safe, RPC, Snapshot, Discord),
+
+whether it must be public (NEXT_PUBLIC_...) or server-side only,
+
+and whether the current code is doing any special parsing (like replace(/\\n/g, '\n') for private keys).
+
+If you see env vars referenced but not defined anywhere, call them out as MISSING.
+
+Use this starting list and expand it based on the actual code:
+
+NEXT_PUBLIC_RPC_URL
+
+NEXT_PUBLIC_CONTRACT_ADDRESS (should be 0x6E3a2e08A88186f41ECD90E0683d9cA0983a4328)
+
+DUNE_API_KEY
+
+DUNE_TOKEN_PRICES_QUERY_ID
+
+DUNE_NFT_FLOOR_PRICES_QUERY_ID
+
+DUNE_WALLET_BALANCES_QUERY_ID
+
+GOOGLE_CLIENT_EMAIL
+
+GOOGLE_PRIVATE_KEY
+
+TREASURY_SPREADSHEET_ID
+
+SNAPSHOT_SPACE (should be kongsdao.eth)
+
+SAFE_TX_SERVICE_URL
+
+SAFE_ADDRESS
+
+NEXT_PUBLIC_SUPABASE_URL
+
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+SUPABASE_SERVICE_ROLE_KEY
+
+Any Discord/Webhook env if present
+
+Then tell me which of these must be added to:
+
+.env.local (for local dev)
+
+.env.example (for the repo so other devs know what to fill in)
+
+3. Web3 / Token-Gating Check
+
+Find the code that checks NFT ownership. Tell me:
+
+which file does it in (e.g. lib/isHolder.ts, API route, or React hook),
+
+which RPC it uses (Infura, Alchemy, or generic RPC from env),
+
+which ABI it uses (ERC721?),
+
+and whether the contract address is hardcoded or read from env.
+
+If the contract is not set to 0x6E3a2e08A88186f41ECD90E0683d9cA0983a4328, tell me where to change it.
+
+If the code assumes a certain chainId (e.g. 1 for mainnet), confirm it.
+
+Tell me if the gating is done server-side, client-side, or both — and whether it’s bypassable right now.
+
+4. Dune Analytics Integration
+
+Find all API routes or helper files referencing Dune.
+
+Tell me if they already fetch from https://api.dune.com/api/v1/query/.../results or if they’re stubbed.
+
+List exactly which query IDs the code expects. If they’re placeholders, say so.
+
+Tell me what shape the code expects from Dune (e.g. { symbol, priceUsd }, { collection, floorPrice }, etc.).
+
+Tell me what error handling exists (if Dune fails, does UI crash or show fallback?).
+
+Tell me what I need to provide (real query IDs + API key).
+
+5. Google Sheets Integration
+
+Find the file that initializes Google Sheets (likely uses service account).
+
+Tell me if the code is already set to parse GOOGLE_PRIVATE_KEY with line breaks.
+
+Tell me which sheet name it expects (e.g. Treasury).
+
+Tell me the column names it assumes.
+
+Tell me what happens if the sheet is empty.
+
+Output the exact Google Cloud setup I must do (create service account, share sheet with service account email, etc.).
+
+6. Gnosis Safe (Treasury) Integration
+
+Find the code that calls Safe Transaction Service.
+
+Tell me the exact endpoint it’s using.
+
+Tell me if it’s using a placeholder Safe address.
+
+Tell me the data shape it expects (USD balances? raw token balances?).
+
+Tell me what I must supply (real Safe address + network).
+
+7. Supabase (IMPORTANT – I have NO TABLES YET)
+
+I do not have any Supabase tables set up yet. I need you to:
+
+Scan for any Supabase client initialization.
+
+Scan for any code that does from('...'), insert, select, etc.
+
+For each table name you find, output:
+
+the table name
+
+the columns the code expects
+
+the data types you can infer
+
+whether id is expected to be UUID or serial
+
+whether RLS is assumed on or off
+
+If the code does not define a schema, propose one based on the types in the codebase. For example, if there is a TreasurySnapshot type like:
