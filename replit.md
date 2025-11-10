@@ -4,6 +4,21 @@
 
 The KingDAO Treasury Dashboard is a token-gated Web3 application designed for Kong NFT holders. Its primary purpose is to provide exclusive, real-time visibility into the DAO's financial treasury, governance activities, and community announcements. The platform aggregates data from various sources (Gnosis Safe, Dune Analytics, Google Sheets, on-chain RPC) to display comprehensive treasury assets, portfolio allocation, DAO-owned NFT holdings, community governance proposals from Snapshot, and Discord announcements. The dashboard features a modern, dark-themed glassmorphic interface, drawing inspiration from leading DeFi platforms, to offer a sophisticated and user-friendly experience for DAO members.
 
+## Recent Changes (November 2025)
+
+### Security Hardening
+- **Server-side admin authentication**: Created POST `/api/auth/is-admin` endpoint with wallet signature verification. Admin addresses no longer exposed in client bundle (VITE_ADMIN_ADDRESSES removed).
+- **Custom admin verification hook**: `useAdminStatus` handles signature requests, caching (4-minute staleTime), and comprehensive error states (loading, cancellation, network failures, access denial).
+- **Error message sanitization**: Implemented `createErrorResponse` utility to prevent stack trace leakage in production. All 15+ API routes updated to use sanitized error responses.
+- **Address validators**: Created `server/lib/validators.ts` with EVM and Solana address validation functions for future use.
+
+### Architecture Improvements
+- **Centralized shared exports**: `shared/index.ts` barrel file consolidates types, constants, and data for cleaner imports across frontend and backend.
+- **Chain metadata**: Expanded `shared/constants.ts` with CHAIN_IDS, EXPLORERS, and SUPPORTED_CHAINS. Added chainId to all wallet objects for explorer link generation.
+- **Reusable WalletCard component**: Created `client/src/components/WalletCard.tsx` to eliminate ~200 lines of duplication across Multi-Sig, DAO Wallets, and Tactical tabs.
+- **Centralized mock data**: `shared/mockData.ts` consolidates all mock wallet balances for easy API integration in the future.
+- **React Query caching**: Dashboard queries now use staleTime (1-5 minutes) and refetchInterval (5-10 minutes) for better performance and reduced API calls.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
