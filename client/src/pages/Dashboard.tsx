@@ -23,14 +23,24 @@ export default function Dashboard() {
     queryKey: ['/api/treasury/google-sheets'],
   });
 
-  const performanceData = [
-    { date: 'Jan', value: 150000 },
-    { date: 'Feb', value: 180000 },
-    { date: 'Mar', value: 165000 },
-    { date: 'Apr', value: 210000 },
-    { date: 'May', value: 195000 },
-    { date: 'Jun', value: 230000 },
-  ];
+  const { data: historicalSnapshots, isLoading: isLoadingHistory } = useQuery<TreasurySnapshot[]>({
+    queryKey: ['/api/treasury/snapshots/history', { limit: 90 }],
+    queryFn: async () => {
+      const response = await fetch('/api/treasury/snapshots/history?limit=90');
+      if (!response.ok) {
+        throw new Error('Failed to fetch historical snapshots');
+      }
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const performanceData = historicalSnapshots && historicalSnapshots.length > 0
+    ? historicalSnapshots.map(s => ({
+        date: new Date(s.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        value: s.totalUsdValue,
+      }))
+    : [];
 
   if (snapshotError) {
     return (
@@ -94,7 +104,11 @@ export default function Dashboard() {
       </div>
 
       <div className="mb-8">
-        <PerformanceChart data={performanceData} />
+        {isLoadingHistory ? (
+          <Skeleton className="h-96 rounded-2xl" />
+        ) : (
+          <PerformanceChart data={performanceData} />
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

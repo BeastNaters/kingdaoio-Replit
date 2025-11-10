@@ -57,6 +57,54 @@ export async function getLatestSnapshot() {
   }
 }
 
+export async function getHistoricalSnapshots(startDate?: string, endDate?: string, limit = 100) {
+  const client = getSupabaseClient();
+  
+  if (!client) {
+    return [];
+  }
+
+  try {
+    let query = client
+      .from('treasury_snapshots')
+      .select('*')
+      .order('timestamp', { ascending: true })
+      .limit(limit);
+
+    if (startDate) {
+      query = query.gte('timestamp', startDate);
+    }
+
+    if (endDate) {
+      query = query.lte('timestamp', endDate);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching historical snapshots:', error);
+      return [];
+    }
+
+    if (data) {
+      return data.map((snapshot: any) => ({
+        id: snapshot.id,
+        timestamp: snapshot.timestamp,
+        totalUsdValue: snapshot.total_usd_value,
+        tokens: snapshot.tokens,
+        nfts: snapshot.nfts,
+        wallets: snapshot.wallets,
+        metadata: snapshot.metadata,
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error fetching historical snapshots:', error);
+    return [];
+  }
+}
+
 export async function upsertSnapshot(snapshot: any) {
   const client = getSupabaseClient();
   

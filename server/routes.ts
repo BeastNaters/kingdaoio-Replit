@@ -7,7 +7,7 @@ import { fetchSafeBalances } from "./lib/safe";
 import { fetchTreasurySheetData } from "./lib/googleSheets";
 import { fetchSnapshotProposals } from "./lib/snapshot";
 import { fetchDiscordAnnouncements } from "./lib/discord";
-import { getLatestSnapshot, upsertSnapshot } from "./lib/supabase";
+import { getLatestSnapshot, upsertSnapshot, getHistoricalSnapshots } from "./lib/supabase";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/auth/holdings", async (req, res) => {
@@ -255,6 +255,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({
         success: false,
         message: error.message || 'Failed to save snapshot',
+      });
+    }
+  });
+
+  app.get("/api/treasury/snapshots/history", async (req, res) => {
+    try {
+      const { startDate, endDate, limit } = req.query;
+      
+      const snapshots = await getHistoricalSnapshots(
+        startDate as string | undefined,
+        endDate as string | undefined,
+        limit ? parseInt(limit as string, 10) : undefined
+      );
+      
+      return res.json(snapshots);
+    } catch (error: any) {
+      console.error('Error fetching historical snapshots:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to fetch historical snapshots',
       });
     }
   });
