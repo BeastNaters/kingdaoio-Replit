@@ -1,5 +1,4 @@
-const SNAPSHOT_HUB_URL = 'https://hub.snapshot.org/graphql';
-const SNAPSHOT_SPACE = process.env.SNAPSHOT_SPACE || 'kongsdao.eth';
+import { SNAPSHOT_HUB_URL, SNAPSHOT_SPACE } from '@shared/constants';
 
 export async function fetchSnapshotProposals() {
   const query = `

@@ -22,6 +22,9 @@ export type TreasurySnapshot = {
   tokens: TokenBalance[];
   nfts: NftHolding[];
   wallets: { address: string; label?: string; chainId?: number }[];
+  metadata?: {
+    mockSources?: string[];
+  };
 };
 
 export type SnapshotProposal = {
@@ -41,6 +44,16 @@ export type DiscordAnnouncement = {
   content: string;
   timestamp: string;
   author: string;
+};
+
+export type DiscordAnnouncementResponse = {
+  data: DiscordAnnouncement[];
+  isMock: boolean;
+};
+
+export type DuneDataResult<T> = {
+  results: T;
+  isMock: boolean;
 };
 
 export type SheetTreasuryEntry = {

@@ -7,16 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProposalVoting } from "@/components/ProposalVoting";
 import { ExternalLink, MessageSquare } from "lucide-react";
-import type { SnapshotProposal, DiscordAnnouncement } from "@shared/treasury-types";
+import type { SnapshotProposal, DiscordAnnouncementResponse } from "@shared/treasury-types";
 
 export default function Community() {
   const { data: proposals, isLoading: isLoadingProposals, error: proposalsError } = useQuery<SnapshotProposal[]>({
     queryKey: ['/api/snapshot/proposals'],
   });
 
-  const { data: announcements, isLoading: isLoadingAnnouncements } = useQuery<DiscordAnnouncement[]>({
+  const { data: announcementResponse, isLoading: isLoadingAnnouncements } = useQuery<DiscordAnnouncementResponse>({
     queryKey: ['/api/discord/announcements'],
   });
+
+  const announcements = announcementResponse?.data || [];
+  const isAnnouncementsMock = announcementResponse?.isMock || false;
 
   const getStateColor = (state: string) => {
     switch (state) {
@@ -128,6 +131,15 @@ export default function Community() {
           title="Discord Announcements"
           subtitle="Latest updates from the community"
         />
+
+        {isAnnouncementsMock && (
+          <div className="mb-6">
+            <AlertBanner
+              type="info"
+              message="Displaying sample announcements. Configure Discord integration in Admin Panel to see real announcements."
+            />
+          </div>
+        )}
 
         {isLoadingAnnouncements ? (
           <div className="space-y-4">

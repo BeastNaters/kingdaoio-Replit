@@ -177,7 +177,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const before = req.query.before as string | undefined;
       
       const announcements = await fetchDiscordAnnouncements(settings, limit, before);
-      return res.json(announcements);
+      const isMock = !settings?.enabled || !settings?.guildId || !settings?.channelId;
+      
+      return res.json({
+        data: announcements,
+        isMock,
+      });
     } catch (error: any) {
       console.error('Error fetching Discord announcements:', error);
       return res.status(500).json({

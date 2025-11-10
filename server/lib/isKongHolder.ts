@@ -1,13 +1,4 @@
-const KONG_NFT_CONTRACT = '0x6E3a2e08A88186f41ECD90E0683d9cA0983a4328';
-const ERC721_ABI = [
-  {
-    constant: true,
-    inputs: [{ name: 'owner', type: 'address' }],
-    name: 'balanceOf',
-    outputs: [{ name: '', type: 'uint256' }],
-    type: 'function',
-  },
-];
+import { KONG_NFT_CONTRACT } from '@shared/constants';
 
 export async function isKongHolder(address: string): Promise<boolean> {
   const rpcUrl = process.env.ETHEREUM_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL;
