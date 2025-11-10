@@ -10,10 +10,10 @@ const ERC721_ABI = [
 ];
 
 export async function isKongHolder(address: string): Promise<boolean> {
-  const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
+  const rpcUrl = process.env.ETHEREUM_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL;
   
   if (!rpcUrl) {
-    console.error('NEXT_PUBLIC_RPC_URL not configured');
+    console.error('ETHEREUM_RPC_URL not configured');
     return false;
   }
 

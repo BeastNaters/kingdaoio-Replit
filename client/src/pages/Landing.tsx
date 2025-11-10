@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Wallet, TrendingUp, Shield, Users } from "lucide-react";
+import { TrendingUp, Shield, Users } from "lucide-react";
+import { WalletConnect } from "@/components/WalletConnect";
 
 export default function Landing() {
   return (
@@ -31,25 +32,20 @@ export default function Landing() {
               Real-time, token-gated treasury visibility for Kong NFT holders. Track DAO assets, multi-sig wallets, and community governance.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                className="gap-2 text-lg px-8 py-6"
-                data-testid="button-connect-wallet-hero"
-              >
-                <Wallet className="h-5 w-5" />
-                Connect Wallet
-              </Button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <WalletConnect />
 
               <Link href="/dashboard">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="text-lg px-8 py-6 backdrop-blur-sm"
-                  data-testid="button-enter-dashboard"
-                >
-                  Enter Dashboard
-                </Button>
+                <div>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="text-lg px-8 py-6 backdrop-blur-sm"
+                    data-testid="button-enter-dashboard"
+                  >
+                    Enter Dashboard
+                  </Button>
+                </div>
               </Link>
             </div>
 

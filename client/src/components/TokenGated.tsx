@@ -1,6 +1,6 @@
 import { Shield } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { WalletConnect } from "./WalletConnect";
 
 export function TokenGated() {
   return (
@@ -23,13 +23,7 @@ export function TokenGated() {
             </p>
 
             <div className="space-y-3">
-              <Button
-                variant="default"
-                className="w-full"
-                data-testid="button-connect-different-wallet"
-              >
-                Connect Different Wallet
-              </Button>
+              <WalletConnect />
 
               <p className="text-xs text-muted-foreground">
                 Contract: <span className="font-mono">0x6E3a...4328</span>
