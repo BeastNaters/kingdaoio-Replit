@@ -1,8 +1,14 @@
 import { Link, useLocation } from "wouter";
+import { useAccount } from "wagmi";
 import { WalletConnect } from "./WalletConnect";
+import { Settings } from "lucide-react";
+
+const ADMIN_ADDRESSES = (import.meta.env.VITE_ADMIN_ADDRESSES || '').toLowerCase().split(',').filter(Boolean);
 
 export function Navbar() {
   const [location] = useLocation();
+  const { address } = useAccount();
+  const isAdmin = address && ADMIN_ADDRESSES.includes(address.toLowerCase());
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
@@ -37,6 +43,20 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
+                    location === "/admin"
+                      ? "text-foreground bg-white/5"
+                      : "text-muted-foreground hover-elevate"
+                  }`}
+                  data-testid="link-nav-admin"
+                >
+                  <Settings className="h-4 w-4" />
+                  Admin
+                </Link>
+              )}
             </div>
           )}
         </div>

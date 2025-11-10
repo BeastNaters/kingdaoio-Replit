@@ -7,10 +7,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Navbar } from "@/components/Navbar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AdminRoute } from "@/components/AdminRoute";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import Nfts from "@/pages/Nfts";
 import Community from "@/pages/Community";
+import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -31,6 +33,11 @@ function Router() {
         <ProtectedRoute>
           <Community />
         </ProtectedRoute>
+      </Route>
+      <Route path="/admin">
+        <AdminRoute>
+          <Admin />
+        </AdminRoute>
       </Route>
       <Route component={NotFound} />
     </Switch>

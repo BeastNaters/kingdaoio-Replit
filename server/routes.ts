@@ -9,6 +9,7 @@ import { fetchTreasurySheetData } from "./lib/googleSheets";
 import { fetchSnapshotProposals } from "./lib/snapshot";
 import { fetchDiscordAnnouncements } from "./lib/discord";
 import { getLatestSnapshot, upsertSnapshot, getHistoricalSnapshots } from "./lib/supabase";
+import { requireAdmin } from "./middleware/adminAuth";
 
 let io: SocketIOServer | null = null;
 
@@ -127,6 +128,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({
         success: false,
         message: error.message || 'Failed to fetch Snapshot proposals',
+      });
+    }
+  });
+
+  app.get("/api/admin/settings", requireAdmin, async (req, res) => {
+    try {
+      const settings = await storage.getAllAdminSettings();
+      return res.json(settings);
+    } catch (error: any) {
+      console.error('Error fetching admin settings:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to fetch settings',
+      });
+    }
+  });
+
+  app.post("/api/admin/settings", requireAdmin, async (req, res) => {
+    try {
+      const { key, value } = req.body;
+      
+      if (!key || value === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: key and value',
+        });
+      }
+
+      const setting = await storage.setAdminSetting({ key, value });
+      return res.json(setting);
+    } catch (error: any) {
+      console.error('Error updating admin setting:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to update setting',
       });
     }
   });
