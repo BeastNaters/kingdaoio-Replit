@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import { isKongHolder } from "./lib/isKongHolder";
 import { fetchTokenPrices, fetchNftFloors, fetchWalletBalances } from "./lib/dune";
@@ -8,6 +9,12 @@ import { fetchTreasurySheetData } from "./lib/googleSheets";
 import { fetchSnapshotProposals } from "./lib/snapshot";
 import { fetchDiscordAnnouncements } from "./lib/discord";
 import { getLatestSnapshot, upsertSnapshot, getHistoricalSnapshots } from "./lib/supabase";
+
+let io: SocketIOServer | null = null;
+
+export function getSocketIO(): SocketIOServer | null {
+  return io;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/auth/holdings", async (req, res) => {
@@ -339,4 +346,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
   return httpServer;
+}
+
+export function initializeSocketIO(server: Server) {
+  io = new SocketIOServer(server, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"],
+    },
+  });
+
+  io.on("connection", (socket) => {
+    console.log(`WebSocket client connected: ${socket.id}`);
+
+    socket.on("disconnect", () => {
+      console.log(`WebSocket client disconnected: ${socket.id}`);
+    });
+  });
+
+  console.log('Socket.IO initialized');
 }

@@ -2,6 +2,7 @@ import { fetchTokenPrices, fetchWalletBalances } from './dune';
 import { fetchSafeBalances } from './safe';
 import { fetchTreasurySheetData } from './googleSheets';
 import { upsertSnapshot } from './supabase';
+import { getSocketIO } from '../routes';
 
 const DEFAULT_SNAPSHOT_INTERVAL = 15 * 60 * 1000;
 const MAX_RETRIES = 3;
@@ -97,6 +98,16 @@ async function generateAndSaveSnapshot(retries = 0): Promise<void> {
 
     const saved = await upsertSnapshot(snapshot);
     console.log(`✓ Scheduled snapshot saved: ${saved?.id}, value: $${totalUsdValue.toFixed(2)}`);
+
+    const io = getSocketIO();
+    if (io) {
+      io.emit('treasury:update', {
+        totalUsdValue,
+        timestamp: snapshot.timestamp,
+        tokenCount: allTokens.length,
+      });
+      console.log('WebSocket event emitted: treasury:update');
+    }
   } catch (error) {
     console.error('Error in scheduled snapshot generation:', error);
     

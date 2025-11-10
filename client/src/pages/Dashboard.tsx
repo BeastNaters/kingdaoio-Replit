@@ -8,9 +8,11 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { AlertBanner } from "@/components/AlertBanner";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTreasuryWebSocket } from "@/hooks/useTreasuryWebSocket";
 import type { TokenBalance, TreasurySnapshot, SheetTreasuryEntry } from "@shared/treasury-types";
 
 export default function Dashboard() {
+  useTreasuryWebSocket();
   const { data: snapshot, isLoading: isLoadingSnapshot, error: snapshotError } = useQuery<TreasurySnapshot>({
     queryKey: ['/api/treasury/snapshots'],
   });

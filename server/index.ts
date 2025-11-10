@@ -1,5 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+import { registerRoutes, initializeSocketIO } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startSnapshotScheduler, stopSnapshotScheduler } from "./lib/scheduler";
 import { initializeSupabaseTables } from "./lib/supabaseInit";
@@ -73,6 +73,9 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
+  
+  initializeSocketIO(server);
+  
   server.listen({
     port,
     host: "0.0.0.0",
