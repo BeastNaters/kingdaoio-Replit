@@ -13,35 +13,15 @@
 // - NFTs owned: https://eth-mainnet.g.alchemy.com/nft/v2/YOUR-API-KEY/getNFTs
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Zap, Lightbulb, ExternalLink, Copy, AlertCircle } from "lucide-react";
+import { Zap, Lightbulb, AlertCircle } from "lucide-react";
 import { daoWallets } from "@shared/daoWallets";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { WalletCard } from "@/components/WalletCard";
+import { getMockBalance, formatMockBalance } from "@shared/mockData";
 
 export function TacticalWalletsTab() {
-  const { toast } = useToast();
-  
   const tacticalWallets = daoWallets.tactical;
   
-  // Mock balances - replace with real API call
-  const mockBalances: Record<string, number> = {
-    "0x1C0F0b94B3130Bd7F3c93417D4c19e9E80C56f74": 8500,
-    "0x8CC04643143caFa204b2797459AA3cb82cd41283": 6200,
-  };
-  
-  const totalValue = Object.values(mockBalances).reduce((sum, val) => sum + val, 0);
-
-  const shortenAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied to clipboard",
-      description: `${label} address copied`,
-    });
-  };
+  const totalValue = tacticalWallets.reduce((sum, wallet) => sum + getMockBalance(wallet.address), 0);
 
   return (
     <div className="space-y-6" data-testid="tab-tactical-wallets">
@@ -98,66 +78,18 @@ export function TacticalWalletsTab() {
         </div>
       </div>
 
-      <Card className="rounded-2xl border border-white/10 bg-card/50 backdrop-blur-xl">
-        <CardHeader>
-          <CardTitle>Tactical Wallets</CardTitle>
-          <CardDescription>Operational wallets with placeholder balances</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {tacticalWallets.map((wallet, index) => (
-              <div
-                key={wallet.address}
-                className="p-4 rounded-lg border border-border bg-background/50 hover-elevate active-elevate-2"
-                data-testid={`tactical-wallet-${index}`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold text-lg">{wallet.label}</h3>
-                      <span className="text-xs px-2 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">
-                        Tactical
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mb-3">
-                      <code className="text-sm text-muted-foreground font-mono">
-                        {shortenAddress(wallet.address)}
-                      </code>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => copyToClipboard(wallet.address, wallet.label)}
-                        data-testid={`button-copy-${index}`}
-                      >
-                        <Copy className="w-3 h-3" />
-                      </Button>
-                      <a
-                        href={`https://etherscan.io/address/${wallet.address}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        data-testid={`link-etherscan-${index}`}
-                      >
-                        <Button size="icon" variant="ghost">
-                          <ExternalLink className="w-3 h-3" />
-                        </Button>
-                      </a>
-                    </div>
-
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-sm text-muted-foreground">Current Balance:</span>
-                      <span className="text-lg font-bold font-heading">
-                        ${mockBalances[wallet.address]?.toLocaleString() || '0'}
-                      </span>
-                      <span className="text-sm text-muted-foreground">USD (mock)</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4">
+        {tacticalWallets.map((wallet) => (
+          <WalletCard
+            key={wallet.address}
+            label={wallet.label}
+            address={wallet.address}
+            chain={wallet.chain}
+            balance={formatMockBalance(getMockBalance(wallet.address), wallet.chain)}
+            balanceUsd={getMockBalance(wallet.address)}
+          />
+        ))}
+      </div>
     </div>
   );
 }

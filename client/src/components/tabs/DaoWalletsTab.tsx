@@ -13,44 +13,15 @@
 // - Recommended: Use Helius API for easier token metadata: https://docs.helius.dev/
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Wallet, Lightbulb, ExternalLink, Copy } from "lucide-react";
+import { Wallet, Lightbulb } from "lucide-react";
 import { daoWallets } from "@shared/daoWallets";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { WalletCard } from "@/components/WalletCard";
+import { getMockBalance, formatMockBalance } from "@shared/mockData";
 
 export function DaoWalletsTab() {
-  const { toast } = useToast();
-  
   const controllerWallets = daoWallets.controller;
   
-  // Mock balances - replace with real API call
-  const mockBalances: Record<string, number> = {
-    "0xd8a7113a701a4eccc5f8aa85a621ac42104d6eb8": 85000,
-    "Gok7zfZ2aZ6ftvYtXhRR2KR8dzu2cKZLDeqvDhNQvipT": 42000,
-    "0xB26ACB02661620C7533A20CC709afDECFe3b94DB": 18000,
-    "0x17c08C6445401736A31f50aFbCca7258623F0Cfb": 12000,
-  };
-  
-  const totalValue = Object.values(mockBalances).reduce((sum, val) => sum + val, 0);
-
-  const shortenAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied to clipboard",
-      description: `${label} address copied`,
-    });
-  };
-
-  const getExplorerUrl = (address: string, chain?: string) => {
-    if (chain === 'SOL') {
-      return `https://solscan.io/account/${address}`;
-    }
-    return `https://etherscan.io/address/${address}`;
-  };
+  const totalValue = controllerWallets.reduce((sum, wallet) => sum + getMockBalance(wallet.address), 0);
 
   return (
     <div className="space-y-6" data-testid="tab-dao-wallets">
@@ -96,81 +67,27 @@ export function DaoWalletsTab() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border border-white/10 bg-card/50 backdrop-blur-xl">
-        <CardHeader>
-          <CardTitle>Controller & Operational Wallets</CardTitle>
-          <CardDescription>Core DAO wallets with placeholder balances</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {controllerWallets.map((wallet, index) => (
-              <div
-                key={wallet.address}
-                className="p-4 rounded-lg border border-border bg-background/50 hover-elevate active-elevate-2"
-                data-testid={`dao-wallet-${index}`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold text-lg">{wallet.label}</h3>
-                      <span 
-                        className={`text-xs px-2 py-0.5 rounded border ${
-                          wallet.chain === 'SOL' 
-                            ? 'bg-accent/10 text-accent border-accent/20' 
-                            : 'bg-primary/10 text-primary border-primary/20'
-                        }`}
-                      >
-                        {wallet.chain}
-                      </span>
-                    </div>
-                    
-                    {wallet.chain === 'SOL' && (
-                      <div className="p-3 mb-3 rounded bg-accent/5 border border-accent/20 flex gap-2">
-                        <Lightbulb className="w-4 h-4 text-accent shrink-0 mt-0.5" />
-                        <p className="text-xs text-muted-foreground">
-                          <strong>Solana Wallet:</strong> Integrate with Solana RPC, Helius, or QuickNode for balance and SPL token data.
-                        </p>
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center gap-2 mb-3">
-                      <code className="text-sm text-muted-foreground font-mono">
-                        {shortenAddress(wallet.address)}
-                      </code>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => copyToClipboard(wallet.address, wallet.label)}
-                        data-testid={`button-copy-${index}`}
-                      >
-                        <Copy className="w-3 h-3" />
-                      </Button>
-                      <a
-                        href={getExplorerUrl(wallet.address, wallet.chain)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        data-testid={`link-explorer-${index}`}
-                      >
-                        <Button size="icon" variant="ghost">
-                          <ExternalLink className="w-3 h-3" />
-                        </Button>
-                      </a>
-                    </div>
-
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-sm text-muted-foreground">Current Balance:</span>
-                      <span className="text-lg font-bold font-heading">
-                        ${mockBalances[wallet.address]?.toLocaleString() || '0'}
-                      </span>
-                      <span className="text-sm text-muted-foreground">USD (mock)</span>
-                    </div>
-                  </div>
-                </div>
+      <div className="grid gap-4">
+        {controllerWallets.map((wallet) => (
+          <div key={wallet.address} className="space-y-3">
+            {wallet.chain === 'SOL' && (
+              <div className="p-3 rounded bg-accent/5 border border-accent/20 flex gap-2">
+                <Lightbulb className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Solana Wallet:</strong> Integrate with Solana RPC, Helius, or QuickNode for balance and SPL token data.
+                </p>
               </div>
-            ))}
+            )}
+            <WalletCard
+              label={wallet.label}
+              address={wallet.address}
+              chain={wallet.chain}
+              balance={formatMockBalance(getMockBalance(wallet.address), wallet.chain)}
+              balanceUsd={getMockBalance(wallet.address)}
+            />
           </div>
-        </CardContent>
-      </Card>
+        ))}
+      </div>
     </div>
   );
 }

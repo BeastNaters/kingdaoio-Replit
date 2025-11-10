@@ -17,6 +17,8 @@ export default function Dashboard() {
   useTreasuryWebSocket();
   const { data: snapshot, isLoading: isLoadingSnapshot, error: snapshotError } = useQuery<TreasurySnapshot>({
     queryKey: ['/api/treasury/snapshots'],
+    staleTime: 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
   });
 
   const { data: historicalSnapshots, isLoading: isLoadingHistory } = useQuery<TreasurySnapshot[]>({
@@ -29,6 +31,7 @@ export default function Dashboard() {
       return response.json();
     },
     staleTime: 5 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
   });
 
   if (snapshotError) {

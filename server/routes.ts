@@ -11,6 +11,10 @@ import { fetchDiscordAnnouncements } from "./lib/discord";
 import { getLatestSnapshot, upsertSnapshot, getHistoricalSnapshots } from "./lib/supabase";
 import { requireAdmin } from "./middleware/adminAuth";
 import { generateCsvData, generatePdfReport } from "./lib/exportUtils";
+import { sanitizeError, createErrorResponse } from "./lib/errorHandler";
+import { verifyMessage } from "viem";
+
+const ADMIN_ADDRESSES = (process.env.ADMIN_ADDRESSES || '').toLowerCase().split(',').filter(Boolean);
 
 let io: SocketIOServer | null = null;
 
@@ -38,11 +42,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         address,
       });
     } catch (error: any) {
-      console.error('Error checking holdings:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to check NFT holdings',
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to check NFT holdings')
+      );
+    }
+  });
+
+  app.post("/api/auth/is-admin", async (req, res) => {
+    try {
+      const { walletAddress, signature, timestamp } = req.body;
+
+      if (!walletAddress || !signature || !timestamp) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: walletAddress, signature, timestamp',
+        });
+      }
+
+      const timestampNum = parseInt(timestamp, 10);
+      const currentTime = Date.now();
+      const fiveMinutes = 5 * 60 * 1000;
+
+      if (Math.abs(currentTime - timestampNum) > fiveMinutes) {
+        return res.status(401).json({
+          success: false,
+          message: 'Signature expired',
+        });
+      }
+
+      const message = `KingDAO Admin Check\nTimestamp: ${timestamp}`;
+      const isValid = await verifyMessage({
+        address: walletAddress as `0x${string}`,
+        message,
+        signature: signature as `0x${string}`,
       });
+
+      if (!isValid) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid signature',
+        });
+      }
+
+      const isAdmin = ADMIN_ADDRESSES.includes(walletAddress.toLowerCase());
+
+      return res.json({
+        success: true,
+        isAdmin,
+      });
+    } catch (error: any) {
+      return res.status(500).json(
+        createErrorResponse(error, 'Admin check failed')
+      );
     }
   });
 
@@ -54,11 +105,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data: prices,
       });
     } catch (error: any) {
-      console.error('Error fetching token prices:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch token prices',
-      });
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to fetch token prices')
+      );
     }
   });
 
@@ -70,11 +119,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data: floors,
       });
     } catch (error: any) {
-      console.error('Error fetching NFT floors:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch NFT floor prices',
-      });
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to fetch NFT floor prices')
+      );
     }
   });
 
@@ -86,11 +133,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data: balances,
       });
     } catch (error: any) {
-      console.error('Error fetching wallet balances:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch wallet balances',
-      });
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to fetch wallet balances')
+      );
     }
   });
 
@@ -99,11 +144,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const balances = await fetchSafeBalances();
       return res.json(balances);
     } catch (error: any) {
-      console.error('Error fetching Safe balances:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch Safe balances',
-      });
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to fetch Safe balances')
+      );
     }
   });
 
@@ -112,11 +155,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const entries = await fetchTreasurySheetData();
       return res.json(entries);
     } catch (error: any) {
-      console.error('Error fetching Google Sheets data:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch treasury sheet data',
-      });
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to fetch treasury sheet data')
+      );
     }
   });
 
@@ -125,11 +166,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const proposals = await fetchSnapshotProposals();
       return res.json(proposals);
     } catch (error: any) {
-      console.error('Error fetching Snapshot proposals:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch Snapshot proposals',
-      });
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to fetch Snapshot proposals')
+      );
     }
   });
 
@@ -138,11 +177,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const settings = await storage.getAllAdminSettings();
       return res.json(settings);
     } catch (error: any) {
-      console.error('Error fetching admin settings:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch settings',
-      });
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to fetch settings')
+      );
     }
   });
 
@@ -160,11 +197,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const setting = await storage.setAdminSetting({ key, value });
       return res.json(setting);
     } catch (error: any) {
-      console.error('Error updating admin setting:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to update setting',
-      });
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to update setting')
+      );
     }
   });
 
@@ -184,11 +219,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isMock,
       });
     } catch (error: any) {
-      console.error('Error fetching Discord announcements:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch Discord announcements',
-      });
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to fetch Discord announcements')
+      );
     }
   });
 
@@ -258,18 +291,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.json(snapshot);
     } catch (error: any) {
-      console.error('Error fetching treasury snapshot:', error);
-      
       const cached = await getLatestSnapshot();
       if (cached) {
         console.log('Returning stale cached snapshot due to error');
         return res.json(cached);
       }
       
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch treasury snapshot',
-      });
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to fetch treasury snapshot')
+      );
     }
   });
 
@@ -300,11 +330,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data: camelCaseResult,
       });
     } catch (error: any) {
-      console.error('Error upserting snapshot:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to save snapshot',
-      });
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to save snapshot')
+      );
     }
   });
 
@@ -320,11 +348,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.json(snapshots);
     } catch (error: any) {
-      console.error('Error fetching historical snapshots:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch historical snapshots',
-      });
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to fetch historical snapshots')
+      );
     }
   });
 
@@ -372,8 +398,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.json(allNfts);
     } catch (error: any) {
-      console.error('Error fetching NFT holdings, attempting cache fallback:', error);
-      
       try {
         const cachedNfts = await storage.getNftAssets();
         console.log(`Returning ${cachedNfts.length} cached NFTs due to API error`);
@@ -401,10 +425,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.send(csvData);
     } catch (error: any) {
-      console.error("Error generating CSV:", error);
-      return res.status(500).json({ 
-        message: error.message || "Failed to generate CSV export" 
-      });
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to generate CSV export')
+      );
     }
   });
 
@@ -424,10 +447,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.send(pdfBuffer);
     } catch (error: any) {
-      console.error("Error generating PDF:", error);
-      return res.status(500).json({ 
-        message: error.message || "Failed to generate PDF report" 
-      });
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to generate PDF report')
+      );
     }
   });
 
