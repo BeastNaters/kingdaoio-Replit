@@ -1,0 +1,84 @@
+Then render this in the NFT Collections tab:
+
+Map over daoNftCollections
+
+For each, show:
+
+name
+
+description
+
+contract address (shortened)
+
+“# Owned: {tokenIds.length}”
+
+Placeholder “Est. Value: …” — if we already have an API route that returns floor prices for these collections, call it and multiply by tokenIds.length. If not, just show “Connect to floor price API to calculate.”
+
+Total Value for NFT Collections
+
+If floor-price endpoint exists (/api/dune/nft-floors or similar), fetch it and:
+
+match by collection name or contract
+
+total = sum(collectionFloor × collectionCount)
+
+If it doesn’t exist yet, show a placeholder card with text:
+
+“Total NFT Collection Value”
+
+“Pending floor price integration”
+
+========================================
+OTHER TABS (STUB THEM OUT)
+
+For the remaining tabs, create stubs so the dev team knows what to fill:
+
+Crypto
+
+Show “Total Crypto Holdings”
+
+Table placeholder for token symbol, amount, USD value, source
+
+Multi-Sig Wallets
+
+Show “Total Multi-Sig Value”
+
+Placeholder list for Gnosis Safe addresses + balances
+
+DAO Wallets
+
+Show “Total DAO Wallet Value”
+
+Placeholder list of known DAO EOA addresses
+
+DAO Tactical Wallets
+
+Show “Total Tactical Wallet Value”
+
+Placeholder description: “Short-term or tactical wallets used for trades, mints, operations.”
+
+Make sure each of these has the SAME layout pattern so it’s consistent.
+
+========================================
+NOTES FOR FUTURE INTEGRATION
+
+Comment in the code where to plug in Dune / floor price API for Rollbots, Sports Rollbots, and KING.
+
+Comment in the code where to load these collections from Supabase instead of hardcoding.
+
+Keep the contract addresses exactly as provided.
+
+========================================
+WHAT TO OUTPUT
+
+Updated dashboard page (or component) with tabbed interface.
+
+A new data file/constant for daoNftCollections.
+
+Rendering logic for NFT Collections tab.
+
+Stubs for the other four tabs with “Total Value” sections.
+
+Any necessary TypeScript types if the project is using TS.
+
+If your dashboard file is named something like app/dashboard/page.tsx or pages/dashboard.tsx, have Replit modify that file specifically. If it’s a component-based dashboard, have it add a new DashboardTabs component and import it.
