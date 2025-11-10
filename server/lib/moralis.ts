@@ -27,61 +27,56 @@ export async function fetchWalletNFTs(walletAddress: string): Promise<NftHolding
   const apiKey = process.env.MORALIS_API_KEY;
   
   if (!apiKey) {
-    console.warn('MORALIS_API_KEY not configured');
-    throw new Error('MORALIS_API_KEY not configured');
+    console.warn('MORALIS_API_KEY not configured - will use cache fallback');
+    throw new Error('MORALIS_API_KEY_MISSING');
   }
 
-  try {
-    const response = await fetch(
-      `${MORALIS_API_URL}/${walletAddress}/nft?chain=eth&format=decimal&normalizeMetadata=true`,
-      {
-        headers: {
-          'Accept': 'application/json',
-          'X-API-Key': apiKey,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Moralis NFT API error: ${response.status} ${response.statusText}`);
+  const response = await fetch(
+    `${MORALIS_API_URL}/${walletAddress}/nft?chain=eth&format=decimal&normalizeMetadata=true`,
+    {
+      headers: {
+        'Accept': 'application/json',
+        'X-API-Key': apiKey,
+      },
     }
+  );
 
-    const data = await response.json();
-    const nfts: MoralisNFT[] = data.result || [];
-
-    if (nfts.length === 0) {
-      console.log(`No NFTs found for wallet ${walletAddress}`);
-      return [];
-    }
-
-    const nftHoldings = await Promise.all(
-      nfts.slice(0, 50).map(async (nft) => {
-        const metadata = nft.normalized_metadata || parseMetadata(nft.metadata);
-        const floorPrice = await fetchCollectionFloorPrice(nft.token_address);
-
-        return {
-          collection: metadata?.name || nft.name || nft.symbol || 'Unknown Collection',
-          tokenId: nft.token_id,
-          image: metadata?.image || '',
-          floorPrice: floorPrice.eth,
-          estimatedValueUsd: floorPrice.usd,
-          contractAddress: nft.token_address,
-        };
-      })
-    );
-
-    const validNfts = nftHoldings.filter(nft => nft.image);
-    
-    if (validNfts.length === 0) {
-      console.log(`No NFTs with valid images found for wallet ${walletAddress}`);
-      return [];
-    }
-
-    return validNfts;
-  } catch (error: any) {
-    console.error('Error fetching NFTs from Moralis:', error);
-    throw error;
+  if (!response.ok) {
+    throw new Error(`Moralis NFT API error: ${response.status} ${response.statusText}`);
   }
+
+  const data = await response.json();
+  const nfts: MoralisNFT[] = data.result || [];
+
+  if (nfts.length === 0) {
+    console.log(`No NFTs found for wallet ${walletAddress}`);
+    return [];
+  }
+
+  const nftHoldings = await Promise.all(
+    nfts.slice(0, 50).map(async (nft) => {
+      const metadata = nft.normalized_metadata || parseMetadata(nft.metadata);
+      const floorPrice = await fetchCollectionFloorPrice(nft.token_address);
+
+      return {
+        collection: metadata?.name || nft.name || nft.symbol || 'Unknown Collection',
+        tokenId: nft.token_id,
+        image: metadata?.image || '',
+        floorPrice: floorPrice.eth,
+        estimatedValueUsd: floorPrice.usd,
+        contractAddress: nft.token_address,
+      };
+    })
+  );
+
+  const validNfts = nftHoldings.filter(nft => nft.image);
+  
+  if (validNfts.length === 0) {
+    console.log(`No NFTs with valid images found for wallet ${walletAddress}`);
+    return [];
+  }
+
+  return validNfts;
 }
 
 function parseMetadata(metadata: string | null): any {

@@ -222,25 +222,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/nfts/holdings", async (req, res) => {
-    try {
-      const walletListSetting = await storage.getAdminSetting('treasury_wallets');
-      const walletList = (walletListSetting?.value as string[]) || [];
-      
-      const safeAddress = process.env.SAFE_ADDRESS;
-      const defaultWallets = safeAddress ? [safeAddress] : [];
-      const walletsToFetch = walletList.length > 0 ? walletList : defaultWallets;
-      
-      if (walletsToFetch.length === 0) {
-        console.warn('No treasury wallets configured, returning empty NFT list');
-        return res.json([]);
-      }
+    const walletListSetting = await storage.getAdminSetting('treasury_wallets');
+    const walletList = (walletListSetting?.value as string[]) || [];
+    
+    const safeAddress = process.env.SAFE_ADDRESS;
+    const defaultWallets = safeAddress ? [safeAddress] : [];
+    const walletsToFetch = walletList.length > 0 ? walletList : defaultWallets;
+    
+    if (walletsToFetch.length === 0) {
+      console.warn('No treasury wallets configured, returning empty NFT list');
+      return res.json([]);
+    }
 
+    try {
       const { fetchWalletNFTs } = await import('./lib/moralis');
       
       const allNfts: any[] = [];
       for (const wallet of walletsToFetch) {
-        const walletNfts = await fetchWalletNFTs(wallet);
-        allNfts.push(...walletNfts);
+        try {
+          const walletNfts = await fetchWalletNFTs(wallet);
+          allNfts.push(...walletNfts);
+        } catch (walletError: any) {
+          console.error(`Error fetching NFTs for wallet ${wallet}:`, walletError);
+          if (walletError.message !== 'MORALIS_API_KEY_MISSING') {
+            throw walletError;
+          }
+        }
       }
 
       if (allNfts.length > 0) {
@@ -258,20 +265,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.json(allNfts);
     } catch (error: any) {
-      console.error('Error fetching NFT holdings:', error);
+      console.error('Error fetching NFT holdings, attempting cache fallback:', error);
       
       try {
         const cachedNfts = await storage.getNftAssets();
-        console.log(`Returning ${cachedNfts.length} cached NFTs due to error`);
+        console.log(`Returning ${cachedNfts.length} cached NFTs due to API error`);
         return res.json(cachedNfts);
       } catch (cacheError) {
         console.error('Error fetching cached NFTs:', cacheError);
+        return res.json([]);
       }
-      
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch NFT holdings',
-      });
     }
   });
 
