@@ -31,6 +31,8 @@ export type SnapshotProposal = {
   start: number;
   end: number;
   link: string;
+  choices?: string[];
+  body?: string;
 };
 
 export type DiscordAnnouncement = {

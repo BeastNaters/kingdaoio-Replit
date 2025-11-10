@@ -53,6 +53,8 @@ export async function fetchSnapshotProposals() {
       start: proposal.start,
       end: proposal.end,
       link: `https://snapshot.org/#/${SNAPSHOT_SPACE}/proposal/${proposal.id}`,
+      choices: proposal.choices || [],
+      body: proposal.body || '',
     }));
   } catch (error) {
     console.error('Error fetching Snapshot proposals:', error);

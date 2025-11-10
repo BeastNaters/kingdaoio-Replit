@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ProposalVoting } from "@/components/ProposalVoting";
 import { ExternalLink, MessageSquare } from "lucide-react";
 import type { SnapshotProposal, DiscordAnnouncement } from "@shared/treasury-types";
 
@@ -71,10 +72,10 @@ export default function Community() {
             {proposals.map((proposal) => (
               <Card
                 key={proposal.id}
-                className="rounded-2xl border border-white/10 bg-card/50 backdrop-blur-xl p-6 hover-elevate"
+                className="rounded-2xl border border-white/10 bg-card/50 backdrop-blur-xl p-6"
                 data-testid={`card-proposal-${proposal.id}`}
               >
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
                   <div className="flex-1">
                     <div className="flex items-start gap-3 mb-2">
                       <h3 className="text-lg font-semibold font-heading flex-1">
@@ -110,6 +111,8 @@ export default function Community() {
                     </a>
                   </Button>
                 </div>
+                
+                <ProposalVoting proposal={proposal} />
               </Card>
             ))}
           </div>
