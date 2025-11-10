@@ -126,7 +126,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/discord/announcements", async (req, res) => {
     try {
-      const announcements = await fetchDiscordAnnouncements();
+      const discordSettings = await storage.getAdminSetting('discord_config');
+      const settings = discordSettings?.value as any;
+      
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+      const before = req.query.before as string | undefined;
+      
+      const announcements = await fetchDiscordAnnouncements(settings, limit, before);
       return res.json(announcements);
     } catch (error: any) {
       console.error('Error fetching Discord announcements:', error);

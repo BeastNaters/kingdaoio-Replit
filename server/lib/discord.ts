@@ -2,6 +2,14 @@ import { Client, GatewayIntentBits } from 'discord.js';
 
 let connectionSettings: any;
 
+interface CachedAnnouncements {
+  data: any[];
+  timestamp: number;
+}
+
+const announcementsCache: Map<string, CachedAnnouncements> = new Map();
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
 async function getAccessToken() {
   if (connectionSettings && connectionSettings.settings.expires_at && new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
     return connectionSettings.settings.access_token;
@@ -40,15 +48,29 @@ async function getUncachableDiscordClient() {
   const token = await getAccessToken();
 
   const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
+    intents: [
+      GatewayIntentBits.Guilds, 
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.MessageContent
+    ]
   });
 
   await client.login(token);
   return client;
 }
 
-export async function fetchDiscordAnnouncements() {
-  return [
+interface DiscordAnnouncementSettings {
+  guildId?: string;
+  channelId?: string;
+  enabled: boolean;
+}
+
+export async function fetchDiscordAnnouncements(
+  settings?: DiscordAnnouncementSettings, 
+  limit: number = 10,
+  before?: string
+) {
+  const mockAnnouncements = [
     {
       id: '1',
       title: 'New Treasury Dashboard Launch',
@@ -71,4 +93,68 @@ export async function fetchDiscordAnnouncements() {
       author: 'Community Manager',
     },
   ];
+
+  if (!settings?.enabled || !settings?.guildId || !settings?.channelId) {
+    console.log('Discord not configured, returning mock announcements');
+    return mockAnnouncements;
+  }
+
+  const cacheKey = `${settings.guildId}-${settings.channelId}-${limit}-${before || 'latest'}`;
+  const cached = announcementsCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    console.log('Returning cached Discord announcements');
+    return cached.data;
+  }
+
+  let client: Client | null = null;
+  
+  try {
+    client = await getUncachableDiscordClient();
+    
+    const guild = await client.guilds.fetch(settings.guildId);
+    if (!guild) {
+      console.error('Discord guild not found:', settings.guildId);
+      return mockAnnouncements;
+    }
+
+    const channel = await guild.channels.fetch(settings.channelId);
+    if (!channel || !channel.isTextBased()) {
+      console.error('Discord channel not found or not text-based:', settings.channelId);
+      return mockAnnouncements;
+    }
+
+    const fetchOptions: any = { limit: Math.min(limit, 50) };
+    if (before) {
+      fetchOptions.before = before;
+    }
+    
+    const messages = await channel.messages.fetch(fetchOptions);
+    
+    const announcements = Array.from(messages.values())
+      .map(msg => ({
+        id: msg.id,
+        title: (msg.content || 'No content').split('\n')[0].slice(0, 100),
+        content: msg.content || 'Message content unavailable',
+        timestamp: msg.createdAt.toISOString(),
+        author: msg.author.username,
+      }))
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    const result = announcements.length > 0 ? announcements : mockAnnouncements;
+    
+    announcementsCache.set(cacheKey, {
+      data: result,
+      timestamp: Date.now(),
+    });
+    
+    return result;
+  } catch (error: any) {
+    console.error('Error fetching Discord announcements:', error);
+    return mockAnnouncements;
+  } finally {
+    if (client) {
+      await client.destroy();
+    }
+  }
 }
