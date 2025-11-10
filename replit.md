@@ -4,7 +4,7 @@
 
 KingDAO Treasury Dashboard is a token-gated Web3 application that provides real-time treasury visibility exclusively for Kong NFT holders. The platform aggregates financial data from multiple sources (Gnosis Safe, Dune Analytics, Google Sheets, on-chain RPC), displays community governance information from Snapshot, and presents Discord announcements—all within a modern, glassmorphic dark-themed interface inspired by leading DeFi platforms like Uniswap and Zapper.
 
-**Core Purpose:** Enable DAO members holding the Kong NFT (ERC721 contract: `0x6E3a2e08A88186f41ECD90E0683d9cA0983a4328` on Ethereum mainnet) to monitor treasury assets, track portfolio allocation, view NFT holdings, and engage with community governance.
+**Core Purpose:** Enable DAO members holding the Kong NFT (ERC721 contract: `0x6E3a2e08A88186f41ECD90E0683d9cA0983a4328` on Ethereum mainnet) to monitor treasury assets, track portfolio allocation, view NFT holdings (including DAO-owned NFT collections: Rollbots, Sports Rollbots, KING), and engage with community governance.
 
 ## User Preferences
 
@@ -189,3 +189,92 @@ The backend acts as a proxy/aggregator for multiple external services to avoid C
 - Snapshot as de facto DAO governance platform
 - Supabase provides managed PostgreSQL with real-time capabilities for future enhancement
 - Replit Connectors simplify OAuth flows in hosted environment
+
+## Recent Features (November 2025)
+
+### Dashboard Restructuring with Tabbed Interface
+
+The Treasury Dashboard has been restructured to organize assets into distinct categories with a tabbed interface:
+
+**Dashboard Layout:**
+1. **Top Section (Preserved):**
+   - Total Treasury Value
+   - Wallet Count
+   - NFT Holdings
+   - Export functionality
+
+2. **Tabbed Categories:**
+   - **NFT Collections:** DAO-owned NFT collections with detailed token information
+   - **Crypto:** Token holdings with portfolio distribution and performance charts
+   - **Multi-Sig:** Gnosis Safe wallet balances (stub - integration pending)
+   - **DAO Wallets:** Primary DAO-controlled wallets (stub - integration pending)
+   - **Tactical:** Short-term operational wallets (stub - integration pending)
+
+### NFT Collections Feature
+
+**Implementation Location:** `client/src/components/tabs/NftCollectionsTab.tsx`
+
+**Data Source:** `shared/daoNfts.ts` - Hardcoded collection data (future: load from Supabase or on-chain)
+
+**DAO-Owned Collections:**
+1. **Rollbots** (77 NFTs)
+   - Contract: `0x2f102e69cbce4938cf7fb27adb40fad097a13668`
+   - Links: OpenSea, Etherscan
+
+2. **Sports Rollbots** (26 NFTs)
+   - Contract: `0x1de7abda2d73a01aa8dca505bdcb773841211daf`
+   - Links: Etherscan
+
+3. **KING** (5 NFTs)
+   - Contract: `0x6E3a2e08A88186f41ECD90E0683d9cA0983a4328` (same as Kong NFT for token-gating)
+   - Links: Etherscan
+
+**Features:**
+- Collection cards showing name, description, contract address, owned count
+- Copy-to-clipboard functionality for contract addresses
+- Expandable token ID lists showing all owned tokens
+- OpenSea/Etherscan external links
+- Total NFT count: 108 tokens across 3 collections
+- Placeholder for floor price API integration (Dune Analytics)
+
+**Future Integrations:**
+- Connect to Dune Analytics for NFT floor prices (`/api/dune/nft-floors`)
+- Load collection metadata from Supabase instead of hardcoding
+- Fetch real-time NFT metadata via Moralis API
+- Get collection stats from OpenSea API
+
+### Crypto Tab (Enhanced)
+
+**Implementation Location:** `client/src/components/tabs/CryptoTab.tsx`
+
+**Features:**
+- Total Crypto Holdings calculated from token balances
+- Portfolio Chart (pie chart showing token distribution)
+- DataTable showing top 10 token holdings
+- Performance Chart tracking historical treasury value over time
+- Loading states with skeleton components
+
+**Data Sources:**
+- `snapshot.tokens` for current holdings
+- `historicalSnapshots` for performance trends
+- Aggregates data from Safe, DAO wallets, and tactical wallets
+
+### Technical Details
+
+**Component Architecture:**
+- Modular tab components in `/client/src/components/tabs/`
+- Each tab receives props from Dashboard parent component
+- Consistent layout pattern across all tabs
+- Integration notes using Lightbulb icons (no emojis per design guidelines)
+
+**Design System Compliance:**
+- No emojis used (replaced with Lucide React icons)
+- Proper button sizing (`size="icon"` for icon-only buttons)
+- Comprehensive `data-testid` attributes for e2e testing
+- Consistent card layouts with glassmorphic styling
+
+**Data Flow:**
+- Dashboard fetches `snapshot` and `historicalSnapshots` via React Query
+- Props passed to CryptoTab for Portfolio/Performance charts
+- NFT Collections tab uses static data from `shared/daoNfts.ts`
+- Stub tabs show placeholder content with integration notes
