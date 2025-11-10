@@ -1,0 +1,70 @@
+I need you to update the dashboard page so that the treasury view is more structured and broken into subcategories. Below are exact requirements — follow them closely.
+
+========================================
+GOAL
+
+Keep the existing “Treasury dashboard” overview/compiler at the top (the high-level cards/summaries can stay), but add a set of clickable subcategory tabs underneath it. Each tab should show data relevant to a specific DAO-owned asset type and should include a “Total Value” section specific to that tab.
+
+The subcategory tabs should be:
+
+NFT Collections
+
+Crypto
+
+Multi-Sig Wallets
+
+DAO Wallets
+
+DAO Tactical Wallets
+
+Assume some of these data sources might be coming from APIs later — so set it up in a way that is easy to plug in real data.
+
+========================================
+COMPONENT / UI REQUIREMENTS
+
+Under the main dashboard header/overview, add a tabbed interface. If we already have a component library (shadcn/ui or similar), use its Tabs component. If not, create a simple tab system with local state.
+
+Each tab should render its own panel/component.
+
+At the top of each tab’s panel, render a Total Value card/section that is specific to that category. For now, if we don’t have real valuation data for all categories, you can:
+
+leave placeholder totals,
+
+or calculate from provided arrays,
+
+but make sure the structure is there: Total Value for NFT Collections, Total Value for Crypto, etc.
+
+Keep styling consistent with the rest of the app (dark, Web3, rounded corners).
+
+========================================
+FOCUS TAB: NFT Collections
+
+Build out the NFT Collections tab more completely than the others because I have real data for this.
+
+What this tab should show:
+
+A header section: “DAO-Owned NFT Collections”
+
+A short description: “These are collections held by the DAO. Values are estimated from floor price data.”
+
+A per-collection card / banner that is clickable (can route to a detail view later or just open a panel).
+
+Each collection card should show:
+
+Collection name
+
+Brief description
+
+Contract address
+
+How many NFTs we own from that collection
+
+Estimated total value for that collection (can be floor price × quantity if floor data is available)
+
+Links area (placeholder) for “View on Etherscan / OpenSea / relevant info”
+
+You can hardcode the 3 collections for now:
+
+Rollbots
+
+Contract: 0x2f102e69cbce4938cf7fb27adb40fad097a13668
