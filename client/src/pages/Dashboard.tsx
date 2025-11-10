@@ -6,6 +6,7 @@ import { PerformanceChart } from "@/components/PerformanceChart";
 import { DataTable } from "@/components/DataTable";
 import { SectionHeader } from "@/components/SectionHeader";
 import { AlertBanner } from "@/components/AlertBanner";
+import { ExportDialog } from "@/components/ExportDialog";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTreasuryWebSocket } from "@/hooks/useTreasuryWebSocket";
@@ -57,9 +58,12 @@ export default function Dashboard() {
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8" data-testid="page-dashboard">
-      <div className="mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold font-heading mb-2">Treasury Dashboard</h1>
-        <p className="text-muted-foreground">Real-time overview of KingDAO treasury assets</p>
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl sm:text-4xl font-bold font-heading mb-2">Treasury Dashboard</h1>
+          <p className="text-muted-foreground">Real-time overview of KingDAO treasury assets</p>
+        </div>
+        <ExportDialog />
       </div>
 
       {isLoadingSnapshot ? (

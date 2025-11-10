@@ -10,6 +10,7 @@ import { fetchSnapshotProposals } from "./lib/snapshot";
 import { fetchDiscordAnnouncements } from "./lib/discord";
 import { getLatestSnapshot, upsertSnapshot, getHistoricalSnapshots } from "./lib/supabase";
 import { requireAdmin } from "./middleware/adminAuth";
+import { generateCsvData, generatePdfReport } from "./lib/exportUtils";
 
 let io: SocketIOServer | null = null;
 
@@ -376,6 +377,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Error fetching cached NFTs:', cacheError);
         return res.json([]);
       }
+    }
+  });
+
+  app.get("/api/export/csv", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+
+      const snapshots = await getHistoricalSnapshots(
+        startDate as string | undefined,
+        endDate as string | undefined
+      );
+
+      const csvData = generateCsvData(snapshots);
+      
+      const filename = `treasury-export-${new Date().toISOString().split('T')[0]}.csv`;
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(csvData);
+    } catch (error: any) {
+      console.error("Error generating CSV:", error);
+      return res.status(500).json({ 
+        message: error.message || "Failed to generate CSV export" 
+      });
+    }
+  });
+
+  app.get("/api/export/pdf", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+
+      const snapshots = await getHistoricalSnapshots(
+        startDate as string | undefined,
+        endDate as string | undefined
+      );
+
+      const pdfBuffer = await generatePdfReport(snapshots);
+      
+      const filename = `treasury-report-${new Date().toISOString().split('T')[0]}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(pdfBuffer);
+    } catch (error: any) {
+      console.error("Error generating PDF:", error);
+      return res.status(500).json({ 
+        message: error.message || "Failed to generate PDF report" 
+      });
     }
   });
 
