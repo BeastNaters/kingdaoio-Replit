@@ -1,0 +1,278 @@
+You are updating the existing KingDAO Treasury Dashboard MVP we worked on earlier (with the tabbed dashboard layout). Now we need to make the tabs actually reflect real DAO wallet structures and crypto holdings that the DAO uses.
+
+This is an extension of the previous work, not a replacement. Keep the tabbed layout we added earlier.
+
+========================================
+GOAL
+
+Keep the dashboard overview/compiler at the top.
+
+Keep the 5 subcategory tabs:
+
+NFT Collections
+
+Crypto
+
+Multi-Sig Wallets
+
+DAO Wallets
+
+DAO Tactical Wallets
+
+Fill these tabs with real addresses and real holdings the DAO uses (provided below).
+
+For data fetching: prefer Web3/on-chain APIs (e.g. EVM RPC, common token price APIs, or future Moralis/Alchemy/theGraph) instead of Dune for everything except the KING NFT collection. Dune should only be used for KING NFT floor/collection-specific analytics.
+
+If we don’t have live APIs wired up yet, create mock data and — IMPORTANT — create a log/comment section in the code that tells the dev team what to integrate later (endpoint name, expected response shape).
+
+========================================
+
+DAO / TREASURY ADDRESSES (TO HARD-CODE FOR NOW)
+========================================
+Add a data file or object (e.g. data/daoWallets.ts) that exports these groups.
+
+Controller / Core wallets
+
+Controller (ETH): 0xd8a7113a701a4eccc5f8aa85a621ac42104d6eb8
+
+Controller (SOL): Gok7zfZ2aZ6ftvYtXhRR2KR8dzu2cKZLDeqvDhNQvipT
+
+Deployer Wallet (ETH): 0xB26ACB02661620C7533A20CC709afDECFe3b94DB
+
+KING Developer Wallet: 0x17c08C6445401736A31f50aFbCca7258623F0Cfb
+
+DAO operations Multi-sigs
+
+DAO Fund (ETH): 0xde27cbE0DdfaDF1C8C27fC8e43f7e713DD1B23cF
+
+Reward Wallet (ETH): 0x24901F1b9b41e853778107CD737cC426b456fC95
+
+Incentivization Bucket Wallet (ETH): 0x00239b99703b773B0A1B6A33f4691867aF071d5A
+
+Tactical Wallets
+
+Dogepound & ZK Race: 0x1C0F0b94B3130Bd7F3c93417D4c19e9E80C56f74
+
+Wilder World: 0x8CC04643143caFa204b2797459AA3cb82cd41283
+
+Please group these in code like:
+
+export const daoWallets = {
+  controller: [
+    { label: "Controller (ETH)", address: "0xd8a7..." },
+    { label: "Controller (SOL)", address: "Gok7z..." },
+    { label: "Deployer Wallet (ETH)", address: "0xB26A..." },
+    { label: "KING Developer Wallet", address: "0x17c0..." },
+  ],
+  multisigs: [
+    { label: "DAO Fund (ETH)", address: "0xde27..." },
+    { label: "Reward Wallet (ETH)", address: "0x2490..." },
+    { label: "Incentivization Bucket Wallet (ETH)", address: "0x0023..." },
+  ],
+  tactical: [
+    { label: "Dogepound & ZK Race", address: "0x1C0F..." },
+    { label: "Wilder World", address: "0x8CC0..." },
+  ],
+};
+
+
+This will feed the respective tabs.
+
+========================================
+2. CRYPTO TAB – ADD “DCA PORTFOLIO” SUBSECTION
+
+Inside the Crypto tab, add a sub-section called “DCA Portfolio”. This is separate from general token balances.
+
+DCA Portfolio holdings (hardcode for now):
+
+BTC = 0.3153
+
+ETH = 10.04
+
+SOL = 94
+
+AVAX = 242.51
+
+LINK = 424.42
+
+ADA = 9,072.07
+
+XRP = 2,310.77
+
+Other DAO token holdings (also show in Crypto tab, maybe under “Other Treasury Tokens”):
+
+ZERC = 7,118
+
+RLB = 6,122,570
+
+PYR = 500
+
+WILD = 1,049
+
+JUP = 7,575
+
+PENGU = 3,795
+
+SOL = 4.35
+
+OP = 1,190.268
+
+What to build in UI:
+
+A small “Total DCA Portfolio Value” card at the top of the DCA section.
+
+A “Portfolio Allocation” chart (can be a simple pie/donut) using the DCA tokens above.
+
+For now: use mock USD prices (e.g. define a mockPrices object in the component).
+
+Comment clearly: “Replace with web3/price API (Coingecko, Moralis token price, Alchemy, etc.)”
+
+A table/list of the DCA tokens:
+
+Columns: Token, Amount, Est. USD (mock), % of portfolio
+
+A “DCA Portfolio Performance” placeholder component:
+
+For now, show a mock line chart or even just a card that says: “Hook this up to historical token prices to track DCA over time.”
+
+Comment what endpoint to add later.
+
+Important instruction to you (Replit):
+
+Do not wire this to Dune. The user wants to pull information from Web3 APIs (or mock them) for general tokens.
+
+Only the KING NFT collection should rely on Dune analytics in this app.
+
+So please structure the code so that price fetching is abstracted, e.g.:
+
+// lib/pricing.ts
+export async function getTokenPrices(symbols: string[]) {
+  // TODO: integrate with Coingecko / Moralis / Alchemy
+  // for now return mock data
+  return {
+    BTC: 67000,
+    ETH: 3400,
+    SOL: 180,
+    AVAX: 28,
+    LINK: 15,
+    ADA: 0.45,
+    XRP: 0.55,
+    // add others as needed
+  };
+}
+
+
+Then the DCA tab uses this and multiplies amount × price to get USD and total.
+
+========================================
+3. MULTI-SIG WALLETS TAB
+
+In the Multi-Sig Wallets tab:
+
+Show a “Total Multi-Sig Value” card (can be mock).
+
+List the 3 multi-sig wallets we provided:
+
+DAO Fund (ETH)
+
+Reward Wallet (ETH)
+
+Incentivization Bucket Wallet (ETH)
+
+For each, show:
+
+label
+
+address (shortened)
+
+placeholder for “current balance” (mock)
+
+placeholder link “View on Etherscan”
+
+Add comments at the top of the component like:
+// TODO: integrate with Gnosis Safe Transaction Service or onchain balance fetch
+// endpoint: https://safe-transaction-mainnet.safe.global/api/v1/safes/{address}/balances/usd/
+
+This tells the dev team what to do.
+
+========================================
+4. DAO WALLETS TAB
+
+In the DAO Wallets tab:
+
+Show a “Total DAO Wallet Value” section.
+
+List the Controller (ETH), Controller (SOL), Deployer, and KING Developer wallets.
+
+Because SOL is present, add a comment noting:
+
+“This wallet is on Solana; integrate with Solana RPC / Helius / QuickNode later.”
+
+For ETH wallets, add placeholder for on-chain balance.
+
+Keep styling consistent.
+
+========================================
+5. DAO TACTICAL WALLETS TAB
+
+In the DAO Tactical Wallets tab:
+
+Show “Total Tactical Wallet Value”
+
+List the 2 tactical wallets:
+
+Dogepound & ZK Race
+
+Wilder World
+
+Add a short description at the top:
+
+“These wallets are used for short-term mints, trades, and tactical operations. Values may fluctuate.”
+
+Add a comment:
+// TODO: Fetch per-wallet token/NFT balances via web3 APIs and roll into tactical total.
+
+========================================
+6. NFT COLLECTIONS TAB (RESTATE PREVIOUS INSTRUCTIONS)
+
+Keep the NFT Collections tab we built earlier, with:
+
+Rollbots (contract: 0x2f102e69cbce4938cf7fb27adb40fad097a13668)
+
+Sports Rollbots (contract: 0x1de7abda2d73a01aa8dca505bdcb773841211daf)
+
+KING (contract: 0x6E3a2e08A88186f41ECD90E0683d9cA0983a4328)
+
+But now also add a comment here specifically:
+// NOTE: For NFT collection valuation, it is OK to use Dune Analytics for floor price data for KING specifically.
+// For all other data (token balances, multisigs, wallets), prefer Web3 APIs.
+
+========================================
+7. “DEV TEAM INTEGRATION LOG”
+
+Create (or update) a small file, or even a comment block at the bottom of the main dashboard component, called something like // DEV INTEGRATION LOG that lists what still needs to be wired up.
+
+Example content:
+
+// DEV INTEGRATION LOG
+// 1. Replace mock token prices in Crypto/DCA tab with real price API (Coingecko, Moralis, Alchemy).
+// 2. For Multi-Sig tab: call Safe Transaction Service to get live USD balances.
+// 3. For DAO wallet balances: call on-chain RPC for ETH, and Solana RPC for the SOL controller.
+// 4. For NFT Collections: integrate Dune only for KING NFT floor data, or use OpenSea/reservoir for others.
+// 5. Move hardcoded wallet and NFT collection data into Supabase tables once schema is ready.
+
+
+This is important because the user wants to hand this off to their dev team.
+
+========================================
+WHAT TO OUTPUT
+
+Updated dashboard component/page with all 5 tabs populated using the wallet data I provided.
+
+A dedicated data file/object for DAO wallets and for DCA portfolio holdings.
+
+Mock price utility for DCA.
+
+Comments/TODOs for dev team, especially about NOT using Dune except for KING NFT.
+
+Consistent styling with existing dashboard.
