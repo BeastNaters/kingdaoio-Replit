@@ -223,26 +223,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/nfts/holdings", async (req, res) => {
     try {
-      const mockNfts = [
-        {
-          collection: 'Kong NFT',
-          tokenId: '1234',
-          image: '',
-          floorPrice: 0.5,
-          estimatedValueUsd: 1225,
-        },
-        {
-          collection: 'Bored Ape Yacht Club',
-          tokenId: '5678',
-          image: '',
-          floorPrice: 12.5,
-          estimatedValueUsd: 30625,
-        },
-      ];
+      const walletListSetting = await storage.getAdminSetting('treasury_wallets');
+      const walletList = (walletListSetting?.value as string[]) || [];
+      
+      const safeAddress = process.env.SAFE_ADDRESS;
+      const defaultWallets = safeAddress ? [safeAddress] : [];
+      const walletsToFetch = walletList.length > 0 ? walletList : defaultWallets;
+      
+      if (walletsToFetch.length === 0) {
+        console.warn('No treasury wallets configured, returning empty NFT list');
+        return res.json([]);
+      }
 
-      return res.json(mockNfts);
+      const { fetchWalletNFTs } = await import('./lib/moralis');
+      
+      const allNfts: any[] = [];
+      for (const wallet of walletsToFetch) {
+        const walletNfts = await fetchWalletNFTs(wallet);
+        allNfts.push(...walletNfts);
+      }
+
+      if (allNfts.length > 0) {
+        const nftAssetData = allNfts.map(nft => ({
+          contractAddress: nft.contractAddress,
+          tokenId: nft.tokenId,
+          collection: nft.collection,
+          image: nft.image || '',
+          floorPrice: nft.floorPrice || 0,
+          estimatedValueUsd: nft.estimatedValueUsd || 0,
+        }));
+
+        await storage.upsertNftAssets(nftAssetData);
+      }
+      
+      return res.json(allNfts);
     } catch (error: any) {
       console.error('Error fetching NFT holdings:', error);
+      
+      try {
+        const cachedNfts = await storage.getNftAssets();
+        console.log(`Returning ${cachedNfts.length} cached NFTs due to error`);
+        return res.json(cachedNfts);
+      } catch (cacheError) {
+        console.error('Error fetching cached NFTs:', cacheError);
+      }
+      
       return res.status(500).json({
         success: false,
         message: error.message || 'Failed to fetch NFT holdings',

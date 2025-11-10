@@ -13,6 +13,7 @@ export type NftHolding = {
   image?: string;
   floorPrice?: number;
   estimatedValueUsd?: number;
+  contractAddress?: string;
 };
 
 export type TreasurySnapshot = {

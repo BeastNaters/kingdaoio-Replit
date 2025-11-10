@@ -4,11 +4,13 @@ import {
   type AdminSetting,
   type InsertAdminSetting,
   type TreasurySnapshot,
-  type InsertTreasurySnapshot
+  type InsertTreasurySnapshot,
+  type NftAsset,
+  type InsertNftAsset
 } from "@shared/schema";
 import { db } from "./db";
-import { users, adminSettings, treasurySnapshots } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { users, adminSettings, treasurySnapshots, nftAssets } from "@shared/schema";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -22,6 +24,11 @@ export interface IStorage {
   getTreasurySnapshots(limit?: number): Promise<TreasurySnapshot[]>;
   getLatestTreasurySnapshot(): Promise<TreasurySnapshot | undefined>;
   createTreasurySnapshot(snapshot: InsertTreasurySnapshot): Promise<TreasurySnapshot>;
+  
+  getNftAssets(): Promise<NftAsset[]>;
+  getNftAsset(contractAddress: string, tokenId: string): Promise<NftAsset | undefined>;
+  upsertNftAsset(asset: InsertNftAsset): Promise<NftAsset>;
+  upsertNftAssets(assets: InsertNftAsset[]): Promise<NftAsset[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -83,6 +90,50 @@ export class DatabaseStorage implements IStorage {
       .values(insertSnapshot)
       .returning();
     return snapshot;
+  }
+
+  async getNftAssets(): Promise<NftAsset[]> {
+    return await db.select().from(nftAssets);
+  }
+
+  async getNftAsset(contractAddress: string, tokenId: string): Promise<NftAsset | undefined> {
+    const [asset] = await db
+      .select()
+      .from(nftAssets)
+      .where(and(
+        eq(nftAssets.contractAddress, contractAddress),
+        eq(nftAssets.tokenId, tokenId)
+      ));
+    return asset || undefined;
+  }
+
+  async upsertNftAsset(insertAsset: InsertNftAsset): Promise<NftAsset> {
+    const [asset] = await db
+      .insert(nftAssets)
+      .values(insertAsset)
+      .onConflictDoUpdate({
+        target: [nftAssets.contractAddress, nftAssets.tokenId],
+        set: {
+          collection: insertAsset.collection,
+          image: insertAsset.image,
+          floorPrice: insertAsset.floorPrice,
+          estimatedValueUsd: insertAsset.estimatedValueUsd,
+          lastUpdated: new Date(),
+        },
+      })
+      .returning();
+    return asset;
+  }
+
+  async upsertNftAssets(assets: InsertNftAsset[]): Promise<NftAsset[]> {
+    if (assets.length === 0) return [];
+    
+    const results: NftAsset[] = [];
+    for (const asset of assets) {
+      const result = await this.upsertNftAsset(asset);
+      results.push(result);
+    }
+    return results;
   }
 }
 

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, jsonb, boolean, real, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, boolean, real, integer, index, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -38,7 +38,7 @@ export const nftAssets = pgTable("nft_assets", {
   estimatedValueUsd: real("estimated_value_usd"),
   lastUpdated: timestamp("last_updated").notNull().default(sql`now()`),
 }, (table) => ({
-  contractTokenIdx: index("contract_token_idx").on(table.contractAddress, table.tokenId),
+  contractTokenUnique: unique("contract_token_unique").on(table.contractAddress, table.tokenId),
 }));
 
 export const insertUserSchema = createInsertSchema(users).pick({
