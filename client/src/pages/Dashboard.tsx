@@ -1,29 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { Wallet, Coins, Image } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
-import { PortfolioChart } from "@/components/PortfolioChart";
-import { PerformanceChart } from "@/components/PerformanceChart";
-import { DataTable } from "@/components/DataTable";
-import { SectionHeader } from "@/components/SectionHeader";
 import { AlertBanner } from "@/components/AlertBanner";
 import { ExportDialog } from "@/components/ExportDialog";
-import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTreasuryWebSocket } from "@/hooks/useTreasuryWebSocket";
-import type { TokenBalance, TreasurySnapshot, SheetTreasuryEntry } from "@shared/treasury-types";
+import { NftCollectionsTab } from "@/components/tabs/NftCollectionsTab";
+import { CryptoTab } from "@/components/tabs/CryptoTab";
+import { MultiSigTab } from "@/components/tabs/MultiSigTab";
+import { DaoWalletsTab } from "@/components/tabs/DaoWalletsTab";
+import { TacticalWalletsTab } from "@/components/tabs/TacticalWalletsTab";
+import type { TreasurySnapshot } from "@shared/treasury-types";
 
 export default function Dashboard() {
   useTreasuryWebSocket();
   const { data: snapshot, isLoading: isLoadingSnapshot, error: snapshotError } = useQuery<TreasurySnapshot>({
     queryKey: ['/api/treasury/snapshots'],
-  });
-
-  const { data: safeBalances, isLoading: isLoadingSafe } = useQuery<TokenBalance[]>({
-    queryKey: ['/api/treasury/safe'],
-  });
-
-  const { data: sheetEntries, isLoading: isLoadingSheets } = useQuery<SheetTreasuryEntry[]>({
-    queryKey: ['/api/treasury/google-sheets'],
   });
 
   const { data: historicalSnapshots, isLoading: isLoadingHistory } = useQuery<TreasurySnapshot[]>({
@@ -37,13 +30,6 @@ export default function Dashboard() {
     },
     staleTime: 5 * 60 * 1000,
   });
-
-  const performanceData = historicalSnapshots && historicalSnapshots.length > 0
-    ? historicalSnapshots.map(s => ({
-        date: new Date(s.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        value: s.totalUsdValue,
-      }))
-    : [];
 
   if (snapshotError) {
     return (
@@ -95,108 +81,50 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {isLoadingSnapshot ? (
-          <>
-            <Skeleton className="h-96 rounded-2xl" />
-            <Skeleton className="h-96 rounded-2xl" />
-          </>
-        ) : (
-          <>
-            <PortfolioChart tokens={snapshot?.tokens || []} />
-            <DataTable tokens={(snapshot?.tokens || []).slice(0, 10)} title="Top Token Holdings" />
-          </>
-        )}
-      </div>
+      <Tabs defaultValue="nft-collections" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          <TabsTrigger value="nft-collections" data-testid="tab-trigger-nft-collections">
+            NFT Collections
+          </TabsTrigger>
+          <TabsTrigger value="crypto" data-testid="tab-trigger-crypto">
+            Crypto
+          </TabsTrigger>
+          <TabsTrigger value="multisig" data-testid="tab-trigger-multisig">
+            Multi-Sig
+          </TabsTrigger>
+          <TabsTrigger value="dao-wallets" data-testid="tab-trigger-dao-wallets">
+            DAO Wallets
+          </TabsTrigger>
+          <TabsTrigger value="tactical" data-testid="tab-trigger-tactical">
+            Tactical
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="mb-8">
-        {isLoadingHistory ? (
-          <Skeleton className="h-96 rounded-2xl" />
-        ) : (
-          <PerformanceChart data={performanceData} />
-        )}
-      </div>
+        <TabsContent value="nft-collections" className="space-y-6">
+          <NftCollectionsTab />
+        </TabsContent>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div>
-          <SectionHeader
-            title="Multi-Sig (Safe) Assets"
-            subtitle="Assets held in Gnosis Safe wallets"
+        <TabsContent value="crypto" className="space-y-6">
+          <CryptoTab 
+            snapshot={snapshot}
+            isLoadingSnapshot={isLoadingSnapshot}
+            historicalSnapshots={historicalSnapshots}
+            isLoadingHistory={isLoadingHistory}
           />
-          {isLoadingSafe ? (
-            <Skeleton className="h-64 rounded-2xl" />
-          ) : (
-            <Card className="rounded-2xl border border-white/10 bg-card/50 backdrop-blur-xl p-6">
-              {safeBalances && safeBalances.length > 0 ? (
-                <div className="space-y-4">
-                  {safeBalances.slice(0, 5).map((token, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between pb-3 border-b border-white/5 last:border-0"
-                      data-testid={`safe-balance-${idx}`}
-                    >
-                      <div>
-                        <div className="font-semibold">{token.symbol}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {token.amount.toLocaleString(undefined, { maximumFractionDigits: 4 })}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold">
-                          ${(token.usdValue || 0).toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  No Safe balances available
-                </div>
-              )}
-            </Card>
-          )}
-        </div>
+        </TabsContent>
 
-        <div>
-          <SectionHeader
-            title="Off-Chain / Manual Entries"
-            subtitle="Treasury data from Google Sheets"
-          />
-          {isLoadingSheets ? (
-            <Skeleton className="h-64 rounded-2xl" />
-          ) : (
-            <Card className="rounded-2xl border border-white/10 bg-card/50 backdrop-blur-xl p-6">
-              {sheetEntries && sheetEntries.length > 0 ? (
-                <div className="space-y-4">
-                  {sheetEntries.slice(0, 5).map((entry, idx) => (
-                    <div
-                      key={idx}
-                      className="pb-3 border-b border-white/5 last:border-0"
-                      data-testid={`sheet-entry-${idx}`}
-                    >
-                      <div className="flex items-start justify-between mb-1">
-                        <div className="font-semibold">{entry.description}</div>
-                        <div className="font-semibold text-right">
-                          ${entry.amountUsd.toLocaleString()}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <span>{entry.category}</span>
-                        <span>{entry.date}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  No sheet entries available
-                </div>
-              )}
-            </Card>
-          )}
-        </div>
-      </div>
+        <TabsContent value="multisig" className="space-y-6">
+          <MultiSigTab />
+        </TabsContent>
+
+        <TabsContent value="dao-wallets" className="space-y-6">
+          <DaoWalletsTab />
+        </TabsContent>
+
+        <TabsContent value="tactical" className="space-y-6">
+          <TacticalWalletsTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

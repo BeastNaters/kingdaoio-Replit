@@ -1,7 +1,29 @@
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Coins } from "lucide-react";
+import { Coins, Lightbulb } from "lucide-react";
+import { PortfolioChart } from "@/components/PortfolioChart";
+import { PerformanceChart } from "@/components/PerformanceChart";
+import { DataTable } from "@/components/DataTable";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { TreasurySnapshot } from "@shared/treasury-types";
 
-export function CryptoTab() {
+interface CryptoTabProps {
+  snapshot?: TreasurySnapshot;
+  isLoadingSnapshot: boolean;
+  historicalSnapshots?: TreasurySnapshot[];
+  isLoadingHistory: boolean;
+}
+
+export function CryptoTab({ snapshot, isLoadingSnapshot, historicalSnapshots, isLoadingHistory }: CryptoTabProps) {
+  const performanceData = historicalSnapshots && historicalSnapshots.length > 0
+    ? historicalSnapshots.map(s => ({
+        date: new Date(s.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        value: s.totalUsdValue,
+      }))
+    : [];
+
+  const totalCryptoValue = snapshot?.tokens?.reduce((sum, token) => sum + (token.usdValue || 0), 0) || 0;
+
   return (
     <div className="space-y-6" data-testid="tab-crypto">
       <div>
@@ -23,51 +45,55 @@ export function CryptoTab() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold font-heading">$--</span>
-              <span className="text-muted-foreground">USD</span>
-            </div>
-            <div className="p-4 rounded-lg bg-muted/30 border border-muted">
-              <p className="text-sm text-muted-foreground">
-                💡 <strong>Integration Required:</strong> Aggregate token balances from:
-              </p>
-              <ul className="list-disc list-inside text-sm text-muted-foreground mt-2 ml-2 space-y-1">
-                <li>Gnosis Safe multi-sig wallets</li>
-                <li>DAO treasury wallets</li>
-                <li>Tactical operation wallets</li>
-              </ul>
+            {isLoadingSnapshot ? (
+              <Skeleton className="h-16 rounded" />
+            ) : (
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-bold font-heading">
+                  ${totalCryptoValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </span>
+                <span className="text-muted-foreground">USD</span>
+              </div>
+            )}
+            <div className="p-4 rounded-lg bg-muted/30 border border-muted flex gap-3">
+              <Lightbulb className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  <strong>Data Sources:</strong> Aggregating token balances from:
+                </p>
+                <ul className="list-disc list-inside text-sm text-muted-foreground mt-2 ml-2 space-y-1">
+                  <li>Gnosis Safe multi-sig wallets</li>
+                  <li>DAO treasury wallets</li>
+                  <li>Tactical operation wallets</li>
+                </ul>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border border-white/10 bg-card/50 backdrop-blur-xl">
-        <CardHeader>
-          <CardTitle>Token Breakdown</CardTitle>
-          <CardDescription>Placeholder for token holdings table</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left py-3 px-4 text-sm font-semibold">Token</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold">Amount</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold">USD Value</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold">Source</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colSpan={4} className="text-center py-8 text-muted-foreground">
-                    No data available. Connect to treasury API endpoints.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {isLoadingSnapshot ? (
+          <>
+            <Skeleton className="h-96 rounded-2xl" />
+            <Skeleton className="h-96 rounded-2xl" />
+          </>
+        ) : (
+          <>
+            <PortfolioChart tokens={snapshot?.tokens || []} />
+            <DataTable tokens={(snapshot?.tokens || []).slice(0, 10)} title="Top Token Holdings" />
+          </>
+        )}
+      </div>
+
+      <div>
+        {isLoadingHistory ? (
+          <Skeleton className="h-96 rounded-2xl" />
+        ) : (
+          <PerformanceChart data={performanceData} />
+        )}
+      </div>
+
     </div>
   );
 }

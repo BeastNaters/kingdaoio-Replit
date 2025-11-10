@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Zap } from "lucide-react";
+import { Zap, Lightbulb } from "lucide-react";
 
 export function TacticalWalletsTab() {
   return (
@@ -27,15 +27,18 @@ export function TacticalWalletsTab() {
               <span className="text-4xl font-bold font-heading">$--</span>
               <span className="text-muted-foreground">USD</span>
             </div>
-            <div className="p-4 rounded-lg bg-muted/30 border border-muted">
-              <p className="text-sm text-muted-foreground">
-                💡 <strong>Integration Required:</strong> Track tactical wallet activities:
-              </p>
-              <ul className="list-disc list-inside text-sm text-muted-foreground mt-2 ml-2 space-y-1">
-                <li>Trading wallets for DeFi operations</li>
-                <li>Mint wallets for NFT acquisitions</li>
-                <li>Operational wallets for gas and utilities</li>
-              </ul>
+            <div className="p-4 rounded-lg bg-muted/30 border border-muted flex gap-3">
+              <Lightbulb className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  <strong>Integration Required:</strong> Track tactical wallet activities:
+                </p>
+                <ul className="list-disc list-inside text-sm text-muted-foreground mt-2 ml-2 space-y-1">
+                  <li>Trading wallets for DeFi operations</li>
+                  <li>Mint wallets for NFT acquisitions</li>
+                  <li>Operational wallets for gas and utilities</li>
+                </ul>
+              </div>
             </div>
           </div>
         </CardContent>

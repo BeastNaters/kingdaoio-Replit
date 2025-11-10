@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield } from "lucide-react";
+import { Shield, Lightbulb } from "lucide-react";
 
 export function MultiSigTab() {
   return (
@@ -27,13 +27,16 @@ export function MultiSigTab() {
               <span className="text-4xl font-bold font-heading">$--</span>
               <span className="text-muted-foreground">USD</span>
             </div>
-            <div className="p-4 rounded-lg bg-muted/30 border border-muted">
-              <p className="text-sm text-muted-foreground">
-                💡 <strong>Integration Required:</strong> Fetch balances from Gnosis Safe Transaction Service API:
-              </p>
-              <code className="block text-xs bg-background/50 px-2 py-1 rounded mt-2 font-mono">
-                /api/treasury/safe
-              </code>
+            <div className="p-4 rounded-lg bg-muted/30 border border-muted flex gap-3">
+              <Lightbulb className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  <strong>Integration Required:</strong> Fetch balances from Gnosis Safe Transaction Service API:
+                </p>
+                <code className="block text-xs bg-background/50 px-2 py-1 rounded mt-2 font-mono">
+                  /api/treasury/safe
+                </code>
+              </div>
             </div>
           </div>
         </CardContent>

@@ -1,4 +1,4 @@
-import { ExternalLink, Copy, CheckCircle2 } from "lucide-react";
+import { ExternalLink, Copy, CheckCircle2, Lightbulb } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,9 +42,10 @@ export function NftCollectionsTab() {
               <span className="text-4xl font-bold font-heading">{totalNfts}</span>
               <span className="text-muted-foreground">NFTs owned</span>
             </div>
-            <div className="p-4 rounded-lg bg-muted/30 border border-muted">
+            <div className="p-4 rounded-lg bg-muted/30 border border-muted flex gap-3">
+              <Lightbulb className="w-4 h-4 text-primary shrink-0 mt-0.5" />
               <p className="text-sm text-muted-foreground">
-                💡 <strong>Integration Note:</strong> Connect to Dune Analytics floor price API 
+                <strong>Integration Note:</strong> Connect to Dune Analytics floor price API 
                 (<code className="text-xs bg-background/50 px-1 py-0.5 rounded">/api/dune/nft-floors</code>) 
                 to calculate estimated USD value (floor price × quantity per collection).
               </p>
@@ -118,15 +119,14 @@ export function NftCollectionsTab() {
                   </code>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     onClick={() => handleCopyAddress(collection.contractAddress)}
-                    className="h-7 w-7 p-0"
                     data-testid={`button-copy-${idx}`}
                   >
                     {copiedAddress === collection.contractAddress ? (
-                      <CheckCircle2 className="w-3 h-3 text-green-500" />
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
                     ) : (
-                      <Copy className="w-3 h-3" />
+                      <Copy className="w-4 h-4" />
                     )}
                   </Button>
                 </div>
@@ -149,7 +149,10 @@ export function NftCollectionsTab() {
                 </div>
 
                 <details className="group">
-                  <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2">
+                  <summary 
+                    className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+                    data-testid={`toggle-token-ids-${idx}`}
+                  >
                     <span>View all {collection.tokenIds.length} token IDs</span>
                     <span className="text-xs group-open:rotate-180 transition-transform">▼</span>
                   </summary>
