@@ -38,7 +38,19 @@ export async function getLatestSnapshot() {
       return null;
     }
 
-    return data;
+    if (data) {
+      return {
+        id: data.id,
+        timestamp: data.timestamp,
+        totalUsdValue: data.total_usd_value,
+        tokens: data.tokens,
+        nfts: data.nfts,
+        wallets: data.wallets,
+        metadata: data.metadata,
+      };
+    }
+
+    return null;
   } catch (error) {
     console.error('Error fetching snapshot:', error);
     return null;
@@ -53,9 +65,18 @@ export async function upsertSnapshot(snapshot: any) {
   }
 
   try {
+    const supabaseSnapshot = {
+      timestamp: snapshot.timestamp,
+      total_usd_value: snapshot.totalUsdValue,
+      tokens: snapshot.tokens,
+      nfts: snapshot.nfts,
+      wallets: snapshot.wallets,
+      metadata: snapshot.metadata || null,
+    };
+
     const { data, error } = await client
       .from('treasury_snapshots')
-      .upsert(snapshot)
+      .upsert(supabaseSnapshot)
       .select()
       .single();
 

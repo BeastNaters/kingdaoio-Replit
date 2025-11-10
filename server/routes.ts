@@ -229,9 +229,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const snapshot = req.body;
       const result = await upsertSnapshot(snapshot);
       
+      if (!result) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to save snapshot',
+        });
+      }
+
+      const camelCaseResult = {
+        id: result.id,
+        timestamp: result.timestamp,
+        totalUsdValue: result.total_usd_value,
+        tokens: result.tokens,
+        nfts: result.nfts,
+        wallets: result.wallets,
+        metadata: result.metadata,
+      };
+      
       return res.json({
         success: true,
-        data: result,
+        data: camelCaseResult,
       });
     } catch (error: any) {
       console.error('Error upserting snapshot:', error);
