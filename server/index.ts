@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { startSnapshotScheduler, stopSnapshotScheduler } from "./lib/scheduler";
+import { initializeSupabaseTables } from "./lib/supabaseInit";
 
 const app = express();
 
@@ -75,7 +77,28 @@ app.use((req, res, next) => {
     port,
     host: "0.0.0.0",
     reusePort: true,
-  }, () => {
+  }, async () => {
     log(`serving on port ${port}`);
+    
+    await initializeSupabaseTables();
+    
+    startSnapshotScheduler();
+  });
+
+  process.on('SIGTERM', () => {
+    log('SIGTERM signal received: closing HTTP server');
+    stopSnapshotScheduler();
+    server.close(() => {
+      log('HTTP server closed');
+    });
+  });
+
+  process.on('SIGINT', () => {
+    log('SIGINT signal received: closing HTTP server');
+    stopSnapshotScheduler();
+    server.close(() => {
+      log('HTTP server closed');
+      process.exit(0);
+    });
   });
 })();

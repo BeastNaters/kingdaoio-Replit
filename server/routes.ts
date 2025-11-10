@@ -145,11 +145,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/treasury/snapshots", async (req, res) => {
     try {
+      const cacheMaxAge = 5 * 60 * 1000;
       const cached = await getLatestSnapshot();
       
-      if (cached) {
-        return res.json(cached);
+      if (cached && cached.timestamp) {
+        const cacheAge = Date.now() - new Date(cached.timestamp).getTime();
+        if (cacheAge < cacheMaxAge) {
+          console.log(`Returning cached snapshot (age: ${Math.floor(cacheAge / 1000)}s)`);
+          return res.json(cached);
+        }
       }
+
+      console.log('Generating new treasury snapshot...');
 
       const [tokenPrices, safeBalances, duneBalances] = await Promise.all([
         fetchTokenPrices(),
@@ -193,9 +200,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         wallets: duneBalances.map(w => ({ address: w.address, chainId: 1 })),
       };
 
+      try {
+        const saved = await upsertSnapshot(snapshot);
+        console.log('Snapshot persisted to Supabase:', saved?.id);
+      } catch (persistError) {
+        console.error('Failed to persist snapshot, continuing with response:', persistError);
+      }
+
       return res.json(snapshot);
     } catch (error: any) {
       console.error('Error fetching treasury snapshot:', error);
+      
+      const cached = await getLatestSnapshot();
+      if (cached) {
+        console.log('Returning stale cached snapshot due to error');
+        return res.json(cached);
+      }
+      
       return res.status(500).json({
         success: false,
         message: error.message || 'Failed to fetch treasury snapshot',
