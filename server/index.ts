@@ -3,6 +3,11 @@ import { registerRoutes, initializeSocketIO } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startSnapshotScheduler, stopSnapshotScheduler } from "./lib/scheduler";
 import { initializeSupabaseTables } from "./lib/supabaseInit";
+import { validateEnvironmentVariables, logValidationResults, exitIfInvalid } from "./validateEnv";
+
+const envValidation = validateEnvironmentVariables();
+logValidationResults(envValidation);
+exitIfInvalid(envValidation);
 
 const app = express();
 
