@@ -28,7 +28,15 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { insertCommunityMemberSchema } from "@shared/schema";
 
-const formSchema = insertCommunityMemberSchema.omit({ walletAddress: true });
+const formSchema = z.object({
+  email: z.string().trim().email("Invalid email address").optional().or(z.literal('')),
+  displayName: z.string().trim().min(1, "Display name is required").max(100, "Display name too long").optional().or(z.literal('')),
+  discordHandle: z.string().trim().min(1, "Discord handle is required").max(50, "Discord handle too long").optional().or(z.literal('')),
+  country: z.string().trim().min(1, "Country is required").max(100, "Country too long").optional().or(z.literal('')),
+}).refine(
+  (data) => data.email || data.displayName,
+  { message: "At least one of email or display name is required", path: ["email"] }
+);
 
 type FormData = z.infer<typeof formSchema>;
 
