@@ -13,7 +13,7 @@ import { requireAdmin } from "./middleware/adminAuth";
 import { generateCsvData, generatePdfReport } from "./lib/exportUtils";
 import { sanitizeError, createErrorResponse } from "./lib/errorHandler";
 import { verifyMessage } from "viem";
-import { insertCommunityMessageSchema } from "@shared/schema";
+import { insertCommunityMessageSchema, insertCommunityMemberSchema } from "@shared/schema";
 
 const ADMIN_ADDRESSES = (process.env.ADMIN_ADDRESSES || '').toLowerCase().split(',').filter(Boolean);
 
@@ -546,6 +546,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.status(500).json(
         createErrorResponse(error, 'Failed to post message')
+      );
+    }
+  });
+
+  // Community Members - Member info capture
+  app.post("/api/community/members", async (req, res) => {
+    try {
+      const validationResult = insertCommunityMemberSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid member data',
+          errors: validationResult.error.issues.map(issue => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+          })),
+        });
+      }
+
+      const { walletAddress } = validationResult.data;
+
+      // Verify Kong NFT ownership
+      const isHolder = await isKongHolder(walletAddress);
+      if (!isHolder) {
+        return res.status(403).json({
+          success: false,
+          message: 'Only Kong NFT holders can register as community members',
+        });
+      }
+
+      // TODO: Persist this to Supabase or production database:
+      // create table community_members (
+      //   id uuid primary key default uuid_generate_v4(),
+      //   wallet_address text unique not null,
+      //   email text,
+      //   display_name text,
+      //   discord_handle text,
+      //   country text,
+      //   created_at timestamptz default now(),
+      //   updated_at timestamptz default now()
+      // );
+
+      const member = await storage.createOrUpdateCommunityMember(validationResult.data);
+
+      return res.status(200).json({
+        success: true,
+        data: member,
+      });
+    } catch (error: any) {
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to save member information')
       );
     }
   });

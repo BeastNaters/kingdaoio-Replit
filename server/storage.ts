@@ -4,10 +4,12 @@ import {
   type NftAsset,
   type InsertNftAsset,
   type CommunityMessage,
-  type InsertCommunityMessage
+  type InsertCommunityMessage,
+  type CommunityMember,
+  type InsertCommunityMember
 } from "@shared/schema";
 import { db } from "./db";
-import { adminSettings, nftAssets, communityMessages } from "@shared/schema";
+import { adminSettings, nftAssets, communityMessages, communityMembers } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
@@ -23,6 +25,9 @@ export interface IStorage {
   getCommunityMessages(channel: string, limit: number, offset: number): Promise<CommunityMessage[]>;
   getLastMessageByWallet(walletAddress: string, channel: string): Promise<CommunityMessage | undefined>;
   createCommunityMessage(message: InsertCommunityMessage): Promise<CommunityMessage>;
+
+  getCommunityMember(walletAddress: string): Promise<CommunityMember | undefined>;
+  createOrUpdateCommunityMember(member: InsertCommunityMember): Promise<CommunityMember>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -124,6 +129,41 @@ export class DatabaseStorage implements IStorage {
       .values(insertMessage)
       .returning();
     return message;
+  }
+
+  async getCommunityMember(walletAddress: string): Promise<CommunityMember | undefined> {
+    const [member] = await db
+      .select()
+      .from(communityMembers)
+      .where(eq(communityMembers.walletAddress, walletAddress));
+    return member || undefined;
+  }
+
+  async createOrUpdateCommunityMember(insertMember: InsertCommunityMember): Promise<CommunityMember> {
+    const existing = await this.getCommunityMember(insertMember.walletAddress);
+    
+    const updateData = {
+      email: insertMember.email || (existing?.email) || null,
+      displayName: insertMember.displayName || (existing?.displayName) || null,
+      discordHandle: insertMember.discordHandle || (existing?.discordHandle) || null,
+      country: insertMember.country || (existing?.country) || null,
+    };
+
+    const [member] = await db
+      .insert(communityMembers)
+      .values({
+        ...insertMember,
+        ...updateData,
+      })
+      .onConflictDoUpdate({
+        target: communityMembers.walletAddress,
+        set: {
+          ...updateData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return member;
   }
 }
 

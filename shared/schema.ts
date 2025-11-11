@@ -92,3 +92,37 @@ export const insertCommunityMessageSchema = createInsertSchema(communityMessages
 
 export type InsertCommunityMessage = z.infer<typeof insertCommunityMessageSchema>;
 export type CommunityMessage = typeof communityMessages.$inferSelect;
+
+export const communityMembers = pgTable("community_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletAddress: text("wallet_address").notNull().unique(),
+  email: text("email"),
+  displayName: text("display_name"),
+  discordHandle: text("discord_handle"),
+  country: text("country"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertCommunityMemberSchema = createInsertSchema(communityMembers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid Ethereum address"),
+  email: z.string().trim().email("Invalid email address").optional().or(z.literal("")),
+  displayName: z.string().trim().min(1).max(100).optional().or(z.literal("")),
+  discordHandle: z.string().trim().min(1).max(100).optional().or(z.literal("")),
+  country: z.string().trim().min(1).max(100).optional().or(z.literal("")),
+}).refine((data) => {
+  const hasEmail = data.email && data.email.trim().length > 0;
+  const hasName = data.displayName && data.displayName.trim().length > 0;
+  const hasDiscord = data.discordHandle && data.discordHandle.trim().length > 0;
+  return hasEmail || hasName || hasDiscord;
+}, {
+  message: "At least one of email, display name, or Discord handle is required",
+  path: ["email"],
+});
+
+export type InsertCommunityMember = z.infer<typeof insertCommunityMemberSchema>;
+export type CommunityMember = typeof communityMembers.$inferSelect;
