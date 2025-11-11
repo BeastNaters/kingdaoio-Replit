@@ -1,0 +1,247 @@
+We need to refactor the Community page and tighten up the NFTs page. Follow the instructions below precisely.
+
+========================================
+
+COMMUNITY PAGE REFACTOR
+========================================
+Goal: The current community view is too crowded. We want to split it into clear subcategories/tabs so each section can be viewed independently.
+
+Create (or update) the Community page to have 3 main subcategory tabs:
+
+Proposals
+
+Announcements
+
+Chat
+
+If the page is currently a single component, refactor it into a parent component with a tabbed interface (use the same tab style we used on the dashboard, or shadcn/ui Tabs if already installed).
+
+Behavior per tab:
+
+Proposals tab
+
+Show the Snapshot proposals (space is kongsdao.eth) that we were already surfacing.
+
+List: title, state (active/closed), start/end, and link to Snapshot.
+
+If there is at least 1 active proposal, the Proposals tab should show a small notification/badge icon (e.g. a dot or count).
+
+Announcements tab
+
+Show Discord / announcements feed (even if it’s currently mocked).
+
+If there is any new/unread announcement (for now you can treat “there is at least 1 announcement in the list” as new), show a small notification/badge on the Announcements tab.
+
+Chat tab
+
+Show the DAO chat UI here only.
+
+This chat is the fallback for when Discord is down.
+
+We want these tabs to be independent so the user doesn’t have to scroll through proposals + announcements + chat all on one page.
+
+========================================
+2. NOTIFICATION ICONS ON SUBCATEGORY TABS
+
+Add a small notification indicator (badge/dot) to the tab labels when certain conditions are met:
+
+Proposals tab: show indicator if any proposal has state === "active" (based on our Snapshot fetch).
+
+Announcements tab: show indicator if the announcements array has length > 0.
+
+Chat tab: show indicator if there are messages that are newer than the last time the user viewed the tab (for now, you can simulate this with a simple “if messages.length > 0 then show dot” until we add per-user read tracking).
+
+Keep it subtle — small dot on the right of the tab label is fine.
+
+========================================
+3. CHAT BUG / ENDPOINT FIX
+
+Right now, sending a message results in an error:
+
+"Failed to fetch on Window: /apicommunity/messages is not valid HTTP method"
+
+This likely means the fetch URL or route path is wrong (missing a slash) or the method is not implemented.
+
+What to do:
+
+Find the component that posts chat messages (likely in the Community page or a Chat component).
+
+Check the fetch call — it probably points to /apicommunity/messages.
+Change it to /api/community/messages (note the slash after /api and the correct casing).
+
+Create (or update) the Next.js route handler at:
+
+app/api/community/messages/route.ts
+to support:
+
+GET → return list of messages
+
+POST → accept a new message
+
+Make sure the route returns JSON in a consistent shape:
+
+// GET
+return Response.json({ success: true, messages });
+
+// POST
+return Response.json({ success: true, message: savedMessage });
+
+
+If we are currently trying to call this from a client component, make sure the method is POST and the body is JSON.
+
+========================================
+4. CHAT USER IDENTIFICATION
+
+We need to decide “what will the username be?” when someone sends a message.
+
+Given how this app is structured (wallet-connect, token-gated), implement the following logic:
+
+On the client, get the connected wallet address (we are already using wagmi / wallet connect on other pages).
+
+When sending a message to /api/community/messages, include:
+
+walletAddress (checksummed ETH address)
+
+displayName if we have it (see section 5 below)
+
+message
+
+On the server route (/api/community/messages):
+
+Validate that walletAddress exists.
+
+If there is no displayName, fall back to a shortened address, e.g. 0xd8a7...6eb8.
+
+Save messages in this structure:
+
+{
+  id: string;
+  walletAddress: string;
+  displayName?: string;
+  message: string;
+  createdAt: string;
+  channel?: string; // default "general"
+}
+
+
+In the UI, display:
+
+displayName if present
+
+else shortened wallet
+
+Add a comment in the API route:
+
+// TODO: tie displayName to member profile data once the community info form is saved to DB.
+
+========================================
+5. COMMUNITY MEMBER INFO CAPTURE (SMALL FORM)
+
+We need a subtle section on the Community page where community members can input info so we can save it in a database. This can be:
+
+either a 4th tab called “Member Info”
+
+or a small panel at the bottom of the Community page
+
+Use your discretion to keep UI clean — a 4th tab might be simplest.
+
+Form fields:
+
+wallet address (prefill with connected wallet if available; make read-only on client)
+
+email
+
+name / Discord name (single field is okay, label: “Name / Discord”)
+
+country
+
+Behavior:
+
+On submit, call a new API route: POST /api/community/members
+
+Route should:
+
+validate required fields (wallet + at least name or email)
+
+save to DB (for now you can mock the save or push to in-memory array)
+
+return { success: true }
+
+Add a comment for dev team:
+
+// TODO: Persist this to Supabase:
+// create table community_members (
+//   id uuid primary key default uuid_generate_v4(),
+//   wallet_address text not null,
+//   email text,
+//   name text,
+//   country text,
+//   created_at timestamptz default now()
+// );
+
+
+This way we keep the structure aligned with the chat feature we discussed earlier.
+
+========================================
+6. NFTS PAGE – SHOW ONLY KING NFTs FOR CONNECTED WALLET
+
+Right now the NFTs page might be showing multiple collections or test data. We want this page to be a personal Kong showcase for the connected holder.
+
+Update the NFTs page/component as follows:
+
+Pull the connected wallet address (wagmi).
+
+Query only the KING/Kong NFT contract:
+
+Contract address: 0x6E3a2e08A88186f41ECD90E0683d9cA0983a4328
+
+Chain: Ethereum mainnet
+
+Show only NFTs from this contract that are owned by the connected address.
+
+If we don’t have a live on-chain fetch yet (e.g. via Alchemy/Moralis/NFT API), create a function that:
+
+hits our existing API (if any) for KING
+
+or returns mock data with a comment:
+
+// TODO: replace with real NFT fetch for connected wallet from KING contract
+// endpoint ideas:
+// - Alchemy NFT API: getNFTsForOwner + filter by contract
+// - Moralis NFT API
+// - On-chain ERC721 tokenOfOwnerByIndex loop (less ideal)
+
+
+The UI should say:
+
+“Your KING NFTs”
+
+If none: “No KING NFTs found for this wallet.”
+
+Remove / hide other collections from this page — this page is personal to the wallet.
+
+========================================
+7. GENERAL NOTES / CLEANUP
+
+Make sure all new API routes are under /api/... not /apicommunity/....
+
+Keep naming consistent: community/messages, community/members.
+
+Keep the dark/Web3 styling consistent with the rest of the app.
+
+Do not remove existing mock data; just improve structure around it.
+
+Add small comments for the dev team wherever we introduced mocks.
+
+========================================
+8. WHAT TO OUTPUT
+
+Updated Community page with tabbed layout (“Proposals”, “Announcements”, “Chat”, optional “Member Info”).
+
+Fixed chat fetch URL and working /api/community/messages route with GET + POST.
+
+Chat messages now tagged with wallet address / display name fallback.
+
+New member info form + /api/community/members route with Supabase-ready schema in comments.
+
+Updated NFTs page to show only KING NFTs for the connected wallet.
