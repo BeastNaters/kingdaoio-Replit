@@ -6,11 +6,33 @@ The KingDAO Treasury Dashboard is a token-gated Web3 application designed for Ko
 
 ## Recent Changes (November 2025)
 
+### Community Chat Feature
+- **Real-time messaging**: Implemented Socket.IO-based community chat with three channels (general, treasury, governance)
+- **Database-enforced rate limiting**: Window-based (30-second) rate limiting per wallet per channel using PostgreSQL unique constraints
+- **Kong NFT holder verification**: Messages validated against Kong NFT ownership before posting
+- **Schema validation**: Zod validation on all message inputs before database insertion
+- **Message ordering**: ASC ordering (oldest first) for proper chat scroll behavior
+- **Community page**: Full chat UI with channel tabs, message history, and real-time updates
+
+### Documentation Suite
+- **DEV_INTEGRATION_ROADMAP.md**: Phased integration plan (Phase 1: Core, Phase 2: Analytics, Phase 3: Community, Phase 4: Advanced)
+- **.env.example**: Comprehensive environment variable reference with descriptions and examples
+- **INTEGRATION_GUIDE.md**: Step-by-step setup instructions for all external integrations (RPC, Gnosis Safe, Dune, Moralis, Supabase, Sheets, Discord)
+- **SECURITY.md**: Security best practices covering threat model, secrets management, authentication, database security, API security, rate limiting, error handling, and incident response
+
+### Environment Validation
+- **server/validateEnv.ts**: Comprehensive environment variable validation at server startup
+- **Required variables**: DATABASE_URL, ETHEREUM_RPC_URL (or NEXT_PUBLIC_RPC_URL), ADMIN_ADDRESSES
+- **Optional validation**: Supabase config, API keys (Dune, Moralis), Google Sheets ID, Safe URLs, snapshot intervals
+- **Startup protection**: Server exits with clear error messages if required variables missing or invalid
+- **Address validation**: Admin addresses validated using isValidEthAddress before server starts
+
 ### Security Hardening
 - **Server-side admin authentication**: Created POST `/api/auth/is-admin` endpoint with wallet signature verification. Admin addresses no longer exposed in client bundle (VITE_ADMIN_ADDRESSES removed).
+- **Timestamp-based signatures**: Client generates timestamp, signs message, server validates within ±5 minute window to prevent replay attacks
 - **Custom admin verification hook**: `useAdminStatus` handles signature requests, caching (4-minute staleTime), and comprehensive error states (loading, cancellation, network failures, access denial).
 - **Error message sanitization**: Implemented `createErrorResponse` utility to prevent stack trace leakage in production. All 15+ API routes updated to use sanitized error responses.
-- **Address validators**: Created `server/lib/validators.ts` with EVM and Solana address validation functions for future use.
+- **Address validators**: Created `server/lib/validators.ts` with EVM and Solana address validation functions (isValidEthAddress, isValidSolAddress, isValidAddress, detectAddressChain).
 
 ### Architecture Improvements
 - **Centralized shared exports**: `shared/index.ts` barrel file consolidates types, constants, and data for cleaner imports across frontend and backend.
