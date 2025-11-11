@@ -356,12 +356,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/nfts/holdings", async (req, res) => {
-    const walletListSetting = await storage.getAdminSetting('treasury_wallets');
-    const walletList = (walletListSetting?.value as string[]) || [];
+    const { wallet, contract } = req.query;
     
-    const safeAddress = process.env.SAFE_ADDRESS;
-    const defaultWallets = safeAddress ? [safeAddress] : [];
-    const walletsToFetch = walletList.length > 0 ? walletList : defaultWallets;
+    let walletsToFetch: string[];
+    
+    if (wallet) {
+      walletsToFetch = [wallet as string];
+    } else {
+      const walletListSetting = await storage.getAdminSetting('treasury_wallets');
+      const walletList = (walletListSetting?.value as string[]) || [];
+      
+      const safeAddress = process.env.SAFE_ADDRESS;
+      const defaultWallets = safeAddress ? [safeAddress] : [];
+      walletsToFetch = walletList.length > 0 ? walletList : defaultWallets;
+    }
     
     if (walletsToFetch.length === 0) {
       console.warn('No treasury wallets configured, returning empty NFT list');
@@ -372,19 +380,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { fetchWalletNFTs } = await import('./lib/moralis');
       
       const allNfts: any[] = [];
-      for (const wallet of walletsToFetch) {
+      for (const walletAddr of walletsToFetch) {
         try {
-          const walletNfts = await fetchWalletNFTs(wallet);
+          const walletNfts = await fetchWalletNFTs(walletAddr);
           allNfts.push(...walletNfts);
         } catch (walletError: any) {
-          console.error(`Error fetching NFTs for wallet ${wallet}:`, walletError);
+          console.error(`Error fetching NFTs for wallet ${walletAddr}:`, walletError);
           if (walletError.message !== 'MORALIS_API_KEY_MISSING') {
             throw walletError;
           }
         }
       }
 
-      if (allNfts.length > 0) {
+      if (allNfts.length > 0 && !wallet) {
         const nftAssetData = allNfts.map(nft => ({
           contractAddress: nft.contractAddress,
           tokenId: nft.tokenId,
@@ -397,12 +405,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.upsertNftAssets(nftAssetData);
       }
       
-      return res.json(allNfts);
+      const filteredNfts = contract 
+        ? allNfts.filter(nft => nft.contractAddress?.toLowerCase() === (contract as string).toLowerCase())
+        : allNfts;
+      
+      return res.json(filteredNfts);
     } catch (error: any) {
+      if (wallet) {
+        console.log('Wallet-specific query failed, returning empty array (cache is treasury-specific)');
+        return res.json([]);
+      }
+      
       try {
         const cachedNfts = await storage.getNftAssets();
-        console.log(`Returning ${cachedNfts.length} cached NFTs due to API error`);
-        return res.json(cachedNfts);
+        console.log(`Returning ${cachedNfts.length} cached treasury NFTs due to API error`);
+        
+        const filteredCached = contract
+          ? cachedNfts.filter(nft => nft.contractAddress?.toLowerCase() === (contract as string).toLowerCase())
+          : cachedNfts;
+        
+        return res.json(filteredCached);
       } catch (cacheError) {
         console.error('Error fetching cached NFTs:', cacheError);
         return res.json([]);
