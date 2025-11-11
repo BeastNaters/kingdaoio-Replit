@@ -67,3 +67,28 @@ export interface SnapshotData {
   nfts: NftHolding[];
   wallets: WalletInfo[];
 }
+
+export const communityMessages = pgTable("community_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletAddress: text("wallet_address").notNull(),
+  username: text("username"),
+  message: text("message").notNull(),
+  channel: text("channel").notNull().default("general"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  windowSlot: text("window_slot").notNull().generatedAlwaysAs(sql`floor(extract(epoch from created_at) / 30)::text`),
+}, (table) => ({
+  rateLimitUnique: unique("rate_limit_unique").on(table.walletAddress, table.channel, table.windowSlot),
+}));
+
+export const insertCommunityMessageSchema = createInsertSchema(communityMessages).omit({
+  id: true,
+  createdAt: true,
+  windowSlot: true,
+}).extend({
+  message: z.string().min(1, "Message cannot be empty").max(1000, "Message too long (max 1000 characters)"),
+  channel: z.string().min(1).max(50).default("general"),
+  username: z.string().max(50).optional(),
+});
+
+export type InsertCommunityMessage = z.infer<typeof insertCommunityMessageSchema>;
+export type CommunityMessage = typeof communityMessages.$inferSelect;

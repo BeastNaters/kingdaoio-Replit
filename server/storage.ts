@@ -2,11 +2,13 @@ import {
   type AdminSetting,
   type InsertAdminSetting,
   type NftAsset,
-  type InsertNftAsset
+  type InsertNftAsset,
+  type CommunityMessage,
+  type InsertCommunityMessage
 } from "@shared/schema";
 import { db } from "./db";
-import { adminSettings, nftAssets } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { adminSettings, nftAssets, communityMessages } from "@shared/schema";
+import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   getAdminSetting(key: string): Promise<AdminSetting | undefined>;
@@ -17,6 +19,10 @@ export interface IStorage {
   getNftAsset(contractAddress: string, tokenId: string): Promise<NftAsset | undefined>;
   upsertNftAsset(asset: InsertNftAsset): Promise<NftAsset>;
   upsertNftAssets(assets: InsertNftAsset[]): Promise<NftAsset[]>;
+
+  getCommunityMessages(channel: string, limit: number, offset: number): Promise<CommunityMessage[]>;
+  getLastMessageByWallet(walletAddress: string, channel: string): Promise<CommunityMessage | undefined>;
+  createCommunityMessage(message: InsertCommunityMessage): Promise<CommunityMessage>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -86,6 +92,38 @@ export class DatabaseStorage implements IStorage {
       results.push(result);
     }
     return results;
+  }
+
+  async getCommunityMessages(channel: string, limit: number, offset: number): Promise<CommunityMessage[]> {
+    const messages = await db
+      .select()
+      .from(communityMessages)
+      .where(eq(communityMessages.channel, channel))
+      .orderBy(desc(communityMessages.createdAt))
+      .limit(limit)
+      .offset(offset);
+    return messages.reverse();
+  }
+
+  async getLastMessageByWallet(walletAddress: string, channel: string): Promise<CommunityMessage | undefined> {
+    const [message] = await db
+      .select()
+      .from(communityMessages)
+      .where(and(
+        eq(communityMessages.walletAddress, walletAddress),
+        eq(communityMessages.channel, channel)
+      ))
+      .orderBy(desc(communityMessages.createdAt))
+      .limit(1);
+    return message || undefined;
+  }
+
+  async createCommunityMessage(insertMessage: InsertCommunityMessage): Promise<CommunityMessage> {
+    const [message] = await db
+      .insert(communityMessages)
+      .values(insertMessage)
+      .returning();
+    return message;
   }
 }
 

@@ -1,15 +1,29 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useAccount } from "wagmi";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { SectionHeader } from "@/components/SectionHeader";
 import { AlertBanner } from "@/components/AlertBanner";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { ProposalVoting } from "@/components/ProposalVoting";
-import { ExternalLink, MessageSquare } from "lucide-react";
+import { ExternalLink, MessageSquare, Send } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { io, Socket } from "socket.io-client";
 import type { SnapshotProposal, DiscordAnnouncementResponse } from "@shared/treasury-types";
+import type { CommunityMessage } from "@shared/schema";
 
 export default function Community() {
+  const { address, isConnected } = useAccount();
+  const { toast } = useToast();
+  const [newMessage, setNewMessage] = useState('');
+  const [socketConnected, setSocketConnected] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   const { data: proposals, isLoading: isLoadingProposals, error: proposalsError } = useQuery<SnapshotProposal[]>({
     queryKey: ['/api/snapshot/proposals'],
   });
@@ -18,8 +32,68 @@ export default function Community() {
     queryKey: ['/api/discord/announcements'],
   });
 
+  const { data: messagesData, isLoading: isLoadingMessages } = useQuery<{success: boolean, data: CommunityMessage[]}>({
+    queryKey: ['/api/community/messages', 'general'],
+    enabled: isConnected,
+    staleTime: 30000,
+    refetchInterval: 60000,
+  });
+
   const announcements = announcementResponse?.data || [];
   const isAnnouncementsMock = announcementResponse?.isMock || false;
+  const messages = messagesData?.data || [];
+
+  useEffect(() => {
+    const socket = io();
+    socketRef.current = socket;
+
+    socket.on('connect', () => setSocketConnected(true));
+    socket.on('disconnect', () => setSocketConnected(false));
+    socket.on('community:new-message', (data: { channel: string, message: CommunityMessage }) => {
+      if (data.channel === 'general') {
+        queryClient.invalidateQueries({ queryKey: ['/api/community/messages', 'general'] });
+      }
+    });
+
+    return () => socket.disconnect();
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const postMessageMutation = useMutation({
+    mutationFn: async (message: string) => {
+      return apiRequest('/api/community/messages', {
+        method: 'POST',
+        body: JSON.stringify({
+          walletAddress: address,
+          message,
+          channel: 'general',
+          username: address ? `${address.slice(0, 6)}...${address.slice(-4)}` : undefined,
+        }),
+      });
+    },
+    onSuccess: () => {
+      setNewMessage('');
+      queryClient.invalidateQueries({ queryKey: ['/api/community/messages', 'general'] });
+      toast({ title: 'Message posted', description: 'Your message has been shared with the community.' });
+    },
+    onError: (error: any) => {
+      const errorData = error.response?.data || error;
+      toast({
+        title: errorData.retryAfter ? 'Rate limit exceeded' : error.status === 403 ? 'Access denied' : 'Failed to post message',
+        description: errorData.retryAfter ? `Please wait ${errorData.retryAfter} seconds` : errorData.message || 'Please try again',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !isConnected) return;
+    postMessageMutation.mutate(newMessage.trim());
+  };
 
   const getStateColor = (state: string) => {
     switch (state) {
@@ -124,6 +198,85 @@ export default function Community() {
             <p className="text-muted-foreground">No proposals found</p>
           </Card>
         )}
+      </div>
+
+      <div className="mb-12">
+        <SectionHeader
+          title="Community Chat"
+          subtitle="Connect with fellow Kong holders (Discord fallback)"
+        />
+
+        {!isConnected && (
+          <div className="mb-6">
+            <AlertBanner
+              type="info"
+              message="Connect your wallet to participate in community chat."
+            />
+          </div>
+        )}
+
+        <Card className="rounded-2xl border border-white/10 bg-card/50 backdrop-blur-xl overflow-hidden">
+          <div className="h-96 flex flex-col">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4" data-testid="chat-messages-container">
+              {isLoadingMessages ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-16 rounded-lg" />
+                  ))}
+                </div>
+              ) : messages.length > 0 ? (
+                messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className="rounded-lg border border-white/5 bg-background/30 p-3"
+                    data-testid={`message-${msg.id}`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-accent">
+                        {msg.username || `${msg.walletAddress.slice(0, 6)}...${msg.walletAddress.slice(-4)}`}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(msg.createdAt).toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-foreground">{msg.message}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <p>No messages yet. Be the first to say hello!</p>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <div className="border-t border-white/10 p-4">
+              <form onSubmit={handleSubmit} className="flex gap-2">
+                <Textarea
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder={isConnected ? "Type your message..." : "Connect wallet to post"}
+                  disabled={!isConnected || postMessageMutation.isPending}
+                  className="resize-none min-h-0 h-10"
+                  maxLength={1000}
+                  data-testid="input-chat-message"
+                />
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={!isConnected || !newMessage.trim() || postMessageMutation.isPending}
+                  data-testid="button-send-message"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </form>
+              <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                <span>{socketConnected ? '● Connected' : '○ Disconnected'}</span>
+                <span>{newMessage.length}/1000</span>
+              </div>
+            </div>
+          </div>
+        </Card>
       </div>
 
       <div>

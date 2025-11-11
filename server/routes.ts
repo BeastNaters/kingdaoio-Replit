@@ -13,6 +13,7 @@ import { requireAdmin } from "./middleware/adminAuth";
 import { generateCsvData, generatePdfReport } from "./lib/exportUtils";
 import { sanitizeError, createErrorResponse } from "./lib/errorHandler";
 import { verifyMessage } from "viem";
+import { insertCommunityMessageSchema } from "@shared/schema";
 
 const ADMIN_ADDRESSES = (process.env.ADMIN_ADDRESSES || '').toLowerCase().split(',').filter(Boolean);
 
@@ -449,6 +450,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       return res.status(500).json(
         createErrorResponse(error, 'Failed to generate PDF report')
+      );
+    }
+  });
+
+  app.get("/api/community/messages", async (req, res) => {
+    try {
+      const channel = (req.query.channel as string) || 'general';
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const messages = await storage.getCommunityMessages(channel, limit, offset);
+      
+      return res.json({
+        success: true,
+        data: messages,
+        pagination: {
+          limit,
+          offset,
+          channel,
+        },
+      });
+    } catch (error: any) {
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to fetch community messages')
+      );
+    }
+  });
+
+  app.post("/api/community/messages", async (req, res) => {
+    try {
+      const validationResult = insertCommunityMessageSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid message data',
+          errors: validationResult.error.issues.map(issue => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+          })),
+        });
+      }
+
+      const { walletAddress, message, channel, username } = validationResult.data;
+      const targetChannel = channel;
+
+      const isHolder = await isKongHolder(walletAddress);
+      if (!isHolder) {
+        return res.status(403).json({
+          success: false,
+          message: 'Only Kong NFT holders can post messages',
+        });
+      }
+
+      const lastMessage = await storage.getLastMessageByWallet(walletAddress, targetChannel);
+      if (lastMessage) {
+        const thirtySecondsAgo = new Date(Date.now() - 30000);
+        if (lastMessage.createdAt > thirtySecondsAgo) {
+          const waitTime = Math.ceil((lastMessage.createdAt.getTime() + 30000 - Date.now()) / 1000);
+          return res.status(429).json({
+            success: false,
+            message: `Please wait ${waitTime} seconds before posting again`,
+            retryAfter: waitTime,
+          });
+        }
+      }
+
+      const newMessage = await storage.createCommunityMessage({
+        walletAddress,
+        message,
+        channel: targetChannel,
+        username: username || undefined,
+      });
+
+      if (io) {
+        io.emit('community:new-message', {
+          channel: newMessage.channel,
+          message: newMessage,
+        });
+      }
+
+      return res.status(201).json({
+        success: true,
+        data: newMessage,
+      });
+    } catch (error: any) {
+      if (error.code === '23505' && error.constraint === 'rate_limit_unique') {
+        return res.status(429).json({
+          success: false,
+          message: 'You are posting too quickly. Please wait 30 seconds between messages.',
+          retryAfter: 30,
+        });
+      }
+      
+      return res.status(500).json(
+        createErrorResponse(error, 'Failed to post message')
       );
     }
   });
