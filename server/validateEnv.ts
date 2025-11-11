@@ -30,7 +30,7 @@ export function validateEnvironmentVariables(): EnvValidationResult {
 
   const ADMIN_ADDRESSES = process.env.ADMIN_ADDRESSES;
   if (!ADMIN_ADDRESSES || ADMIN_ADDRESSES.trim() === '') {
-    errors.push('ADMIN_ADDRESSES is required for admin authentication features');
+    warnings.push('ADMIN_ADDRESSES not set - admin features will be disabled. Set this to enable admin panel access.');
   } else {
     const addresses = ADMIN_ADDRESSES.split(',').map(addr => addr.trim());
     const invalidAddresses = addresses.filter(addr => !isValidEthAddress(addr));
